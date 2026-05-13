@@ -70,7 +70,7 @@ export function createInitialFlightState(
     combo: 1,
     checkpointIndex: 0,
     checkpointDistance: 9999,
-    message: "Airborne. Scroll throttle, mouse banks and pitches.",
+    message: "Airborne. Arrow keys fly, scroll sets throttle.",
     lessonGrade: 100,
     lastGearToggle: false,
   };

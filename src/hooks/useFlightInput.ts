@@ -1,6 +1,7 @@
 "use client";
 
 import { MutableRefObject, useEffect, useRef } from "react";
+import { useGameStore } from "@/lib/flight/store";
 import { InputFrame } from "@/lib/flight/types";
 
 const emptyInput = (): InputFrame => ({
@@ -20,6 +21,7 @@ const emptyInput = (): InputFrame => ({
 });
 
 export function useFlightInput(): MutableRefObject<InputFrame> {
+  const controls = useGameStore((state) => state.controls);
   const inputRef = useRef<InputFrame>(emptyInput());
   const keysRef = useRef(new Set<string>());
   const mouseRef = useRef({ x: 0, y: 0, active: false });
@@ -29,16 +31,25 @@ export function useFlightInput(): MutableRefObject<InputFrame> {
       const keys = keysRef.current;
       const mouse = mouseRef.current;
       const keyboardPitch =
-        Number(keys.has("arrowdown") || keys.has("s")) - Number(keys.has("arrowup") || keys.has("w"));
+        Number(keys.has("arrowdown")) -
+        Number(keys.has("arrowup")) +
+        (controls.wasdEnabled ? Number(keys.has("s")) - Number(keys.has("w")) : 0);
       const keyboardRoll =
-        Number(keys.has("arrowleft") || keys.has("a")) - Number(keys.has("arrowright") || keys.has("d"));
+        Number(keys.has("arrowleft")) -
+        Number(keys.has("arrowright")) +
+        (controls.wasdEnabled ? Number(keys.has("a")) - Number(keys.has("d")) : 0);
       const yaw = Number(keys.has("q")) - Number(keys.has("e"));
-      const mousePitch = mouse.active ? mouse.y * 0.74 : 0;
-      const mouseRoll = mouse.active ? mouse.x * 0.86 : 0;
+      const acceptsMouse = controls.mode === "mouse" || controls.mode === "hybrid";
+      const acceptsKeyboard = controls.mode === "keyboard" || controls.mode === "hybrid";
+      const invert = controls.invertPitch ? -1 : 1;
+      const mousePitch = acceptsMouse && mouse.active ? mouse.y * controls.mouseSensitivity * invert : 0;
+      const mouseRoll = acceptsMouse && mouse.active ? mouse.x * controls.mouseSensitivity : 0;
+      const arrowPitch = acceptsKeyboard ? keyboardPitch * controls.pitchSensitivity * invert : 0;
+      const arrowRoll = acceptsKeyboard ? keyboardRoll * controls.rollSensitivity : 0;
 
-      inputRef.current.pitch = clamp(mousePitch + keyboardPitch * 0.74);
-      inputRef.current.roll = clamp(mouseRoll + keyboardRoll * 0.88);
-      inputRef.current.yaw = clamp(yaw * 0.72);
+      inputRef.current.pitch = clamp(mousePitch + arrowPitch);
+      inputRef.current.roll = clamp(mouseRoll + arrowRoll);
+      inputRef.current.yaw = clamp(yaw * controls.yawSensitivity);
       inputRef.current.boost = keys.has(" ");
       inputRef.current.brakeRelease = keys.has(" ");
       inputRef.current.airBrake = keys.has("shift");
@@ -113,7 +124,7 @@ export function useFlightInput(): MutableRefObject<InputFrame> {
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("wheel", handleWheel);
     };
-  }, []);
+  }, [controls]);
 
   return inputRef;
 }

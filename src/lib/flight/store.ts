@@ -7,8 +7,10 @@ import {
   AcademyLessonId,
   AircraftId,
   CameraMode,
+  ControlSettings,
   FlightTelemetry,
   GameModeId,
+  HudSettings,
   MapId,
   PayloadState,
   RealismPreset,
@@ -28,6 +30,8 @@ type GameStore = {
   academyLessonId: AcademyLessonId;
   payload: PayloadState;
   telemetry: FlightTelemetry;
+  controls: ControlSettings;
+  hudSettings: HudSettings;
   quality: QualityPreset;
   music: boolean;
   fpsLimiter: boolean;
@@ -45,6 +49,8 @@ type GameStore = {
   setAcademyLesson: (lessonId: AcademyLessonId) => void;
   setPayload: (payload: Partial<PayloadState>) => void;
   setTelemetry: (telemetry: FlightTelemetry) => void;
+  setControlSettings: (settings: Partial<ControlSettings>) => void;
+  setHudSettings: (settings: Partial<HudSettings>) => void;
   setQuality: (quality: QualityPreset) => void;
   setMusic: (music: boolean) => void;
   setFpsLimiter: (fpsLimiter: boolean) => void;
@@ -62,6 +68,22 @@ const initialPayload: PayloadState = {
   cgPercent: 49,
 };
 
+const initialControls: ControlSettings = {
+  mode: "keyboard",
+  pitchSensitivity: 1,
+  rollSensitivity: 1,
+  yawSensitivity: 0.72,
+  mouseSensitivity: 0.48,
+  invertPitch: false,
+  wasdEnabled: true,
+};
+
+const initialHudSettings: HudSettings = {
+  layout: "clean",
+  opacity: 0.86,
+  showAdvancedRibbon: false,
+};
+
 export const useGameStore = create<GameStore>()(
   persist(
     (set) => ({
@@ -74,6 +96,8 @@ export const useGameStore = create<GameStore>()(
       academyLessonId: "basic-flight",
       payload: initialPayload,
       telemetry: defaultTelemetry(),
+      controls: initialControls,
+      hudSettings: initialHudSettings,
       quality: "adaptive",
       music: true,
       fpsLimiter: false,
@@ -100,6 +124,10 @@ export const useGameStore = create<GameStore>()(
           revision: state.revision + 1,
         })),
       setTelemetry: (telemetry) => set({ telemetry }),
+      setControlSettings: (settings) =>
+        set((state) => ({ controls: { ...state.controls, ...settings } })),
+      setHudSettings: (settings) =>
+        set((state) => ({ hudSettings: { ...state.hudSettings, ...settings } })),
       setQuality: (quality) => set({ quality }),
       setMusic: (music) => set({ music }),
       setFpsLimiter: (fpsLimiter) => set({ fpsLimiter }),
@@ -120,6 +148,8 @@ export const useGameStore = create<GameStore>()(
         realism: state.realism,
         academyLessonId: state.academyLessonId,
         payload: state.payload,
+        controls: state.controls,
+        hudSettings: state.hudSettings,
         quality: state.quality,
         music: state.music,
         fpsLimiter: state.fpsLimiter,

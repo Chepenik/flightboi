@@ -14,13 +14,23 @@ export function Hud() {
   const music = useGameStore((state) => state.music);
   const fpsLimiter = useGameStore((state) => state.fpsLimiter);
   const cameraMode = useGameStore((state) => state.cameraMode);
+  const hudSettings = useGameStore((state) => state.hudSettings);
   const setMusic = useGameStore((state) => state.setMusic);
   const setFpsLimiter = useGameStore((state) => state.setFpsLimiter);
   const setScreenshotMode = useGameStore((state) => state.setScreenshotMode);
   const realism = useGameStore((state) => state.realism);
 
   return (
-    <section className={cameraMode === "cockpit" ? "hud cockpit-hud" : "hud"} data-flight-ui="true" aria-label="Flight HUD">
+    <section
+      className={[
+        "hud",
+        `hud-${hudSettings.layout}`,
+        cameraMode === "cockpit" ? "cockpit-hud" : "",
+      ].join(" ")}
+      data-flight-ui="true"
+      aria-label="Flight HUD"
+      style={{ "--hud-opacity": hudSettings.opacity } as CSSProperties}
+    >
       <div className="hud-primary">
         <HudMetric icon={<Gauge size={18} />} label="KTAS" value={telemetry.speedKt.toFixed(0)} alert={telemetry.stall} />
         <HudMetric icon={<Activity size={18} />} label="ALT FT" value={telemetry.altitudeFt.toFixed(0)} />
@@ -66,6 +76,7 @@ export function Hud() {
         </button>
       </div>
 
+      {hudSettings.showAdvancedRibbon && (
       <div className="academy-ribbon">
         <span>VSI {telemetry.verticalSpeedFpm.toFixed(0)} fpm</span>
         <span>AoA {telemetry.aoaDeg.toFixed(1)} deg</span>
@@ -75,6 +86,7 @@ export function Hud() {
         {realism.densityAltitude && <span>DA {telemetry.densityAltitudeFt.toFixed(0)} ft</span>}
         {telemetry.stall && <b>STALL</b>}
       </div>
+      )}
     </section>
   );
 }

@@ -2,7 +2,18 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { useMemo } from "react";
-import { Activity, Camera, Gauge, GraduationCap, Plane, Radar, RotateCcw, Settings2 } from "lucide-react";
+import {
+  Activity,
+  Camera,
+  Gauge,
+  GraduationCap,
+  Keyboard,
+  MousePointer2,
+  Plane,
+  Radar,
+  RotateCcw,
+  Settings2,
+} from "lucide-react";
 import { FlightCanvas } from "./FlightCanvas";
 import { Hud } from "./Hud";
 import { CockpitOverlay } from "./CockpitOverlay";
@@ -10,7 +21,15 @@ import { AcademyOverlay } from "./AcademyOverlay";
 import { MobileWarning } from "./MobileWarning";
 import { aircraft, gameModes, getAircraft, getMap, maps } from "@/lib/flight/catalog";
 import { useGameStore } from "@/lib/flight/store";
-import { AircraftId, CameraMode, GameModeId, MapId, RealismPreset } from "@/lib/flight/types";
+import {
+  AircraftId,
+  CameraMode,
+  ControlMode,
+  GameModeId,
+  HudLayout,
+  MapId,
+  RealismPreset,
+} from "@/lib/flight/types";
 
 const cameraModes: { id: CameraMode; label: string }[] = [
   { id: "chase", label: "Chase" },
@@ -28,6 +47,18 @@ const realismPresets: { id: RealismPreset; label: string }[] = [
   { id: "custom", label: "Custom" },
 ];
 
+const controlModes: { id: ControlMode; label: string }[] = [
+  { id: "keyboard", label: "Arrows" },
+  { id: "hybrid", label: "Hybrid" },
+  { id: "mouse", label: "Mouse" },
+];
+
+const hudLayouts: { id: HudLayout; label: string }[] = [
+  { id: "clean", label: "Clean" },
+  { id: "full", label: "Full" },
+  { id: "minimal", label: "Minimal" },
+];
+
 export default function FlightBoiApp() {
   const {
     aircraftId,
@@ -36,6 +67,8 @@ export default function FlightBoiApp() {
     cameraMode,
     realismPreset,
     payload,
+    controls,
+    hudSettings,
     screenshotMode,
     setAircraft,
     setMap,
@@ -43,6 +76,8 @@ export default function FlightBoiApp() {
     setCameraMode,
     setRealismPreset,
     setPayload,
+    setControlSettings,
+    setHudSettings,
     restartFlight,
   } = useGameStore();
 
@@ -149,7 +184,7 @@ export default function FlightBoiApp() {
           </aside>
 
           <aside className="right-panel control-panel" data-flight-ui="true" aria-label="Pilot systems">
-            <PanelHeader icon={<Gauge size={16} />} title="Pilot Systems" detail="W&B, camera, nav" />
+            <PanelHeader icon={<Gauge size={16} />} title="Pilot Systems" detail="W&B, camera, settings" />
 
             <div className="instrument-strip">
               <SystemPill icon={<Radar size={14} />} label="Wind" value={`${activeMap.wind.speedKt}G${activeMap.wind.gustKt}`} />
@@ -218,6 +253,98 @@ export default function FlightBoiApp() {
               </div>
             </div>
 
+            <div className="field-block">
+              <span className="field-label">Settings</span>
+              <div className="settings-card">
+                <div className="settings-row-title">
+                  <Keyboard size={15} />
+                  <strong>Primary controls</strong>
+                </div>
+                <div className="segmented settings-tabs">
+                  {controlModes.map((mode) => (
+                    <button
+                      key={mode.id}
+                      className={controls.mode === mode.id ? "active" : ""}
+                      type="button"
+                      onClick={() => setControlSettings({ mode: mode.id })}
+                    >
+                      {mode.label}
+                    </button>
+                  ))}
+                </div>
+                <SliderRow
+                  label="Pitch"
+                  value={controls.pitchSensitivity}
+                  min={0.45}
+                  max={1.4}
+                  step={0.05}
+                  display={`${Math.round(controls.pitchSensitivity * 100)}%`}
+                  onChange={(value) => setControlSettings({ pitchSensitivity: value })}
+                />
+                <SliderRow
+                  label="Roll"
+                  value={controls.rollSensitivity}
+                  min={0.45}
+                  max={1.45}
+                  step={0.05}
+                  display={`${Math.round(controls.rollSensitivity * 100)}%`}
+                  onChange={(value) => setControlSettings({ rollSensitivity: value })}
+                />
+                <SliderRow
+                  label="Mouse"
+                  value={controls.mouseSensitivity}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  display={`${Math.round(controls.mouseSensitivity * 100)}%`}
+                  onChange={(value) => setControlSettings({ mouseSensitivity: value })}
+                />
+                <ToggleRow
+                  label="Invert pitch"
+                  enabled={controls.invertPitch}
+                  onClick={() => setControlSettings({ invertPitch: !controls.invertPitch })}
+                />
+                <ToggleRow
+                  label="WASD assist"
+                  enabled={controls.wasdEnabled}
+                  onClick={() => setControlSettings({ wasdEnabled: !controls.wasdEnabled })}
+                />
+              </div>
+
+              <div className="settings-card">
+                <div className="settings-row-title">
+                  <MousePointer2 size={15} />
+                  <strong>HUD layout</strong>
+                </div>
+                <div className="segmented settings-tabs">
+                  {hudLayouts.map((layout) => (
+                    <button
+                      key={layout.id}
+                      className={hudSettings.layout === layout.id ? "active" : ""}
+                      type="button"
+                      onClick={() => setHudSettings({ layout: layout.id })}
+                    >
+                      {layout.label}
+                    </button>
+                  ))}
+                </div>
+                <SliderRow
+                  label="Opacity"
+                  value={hudSettings.opacity}
+                  min={0.35}
+                  max={1}
+                  step={0.05}
+                  display={`${Math.round(hudSettings.opacity * 100)}%`}
+                  onChange={(value) => setHudSettings({ opacity: value })}
+                />
+                <ToggleRow
+                  label="Advanced tape"
+                  enabled={hudSettings.showAdvancedRibbon}
+                  onClick={() => setHudSettings({ showAdvancedRibbon: !hudSettings.showAdvancedRibbon })}
+                />
+              </div>
+            </div>
+
             <div className="flight-note">
               <strong>{activeAircraft.soundProfile.idle}</strong>
               <span>{activeAircraft.description}</span>
@@ -225,7 +352,8 @@ export default function FlightBoiApp() {
           </aside>
 
           <div className="controls-cheatsheet" data-flight-ui="true">
-            <span>Mouse pitch/roll</span>
+            <span>Arrow keys fly</span>
+            <span>{controls.mode === "keyboard" ? "Mouse look only" : "Mouse assist"}</span>
             <span>Wheel throttle</span>
             <span>Space boost</span>
             <span>Shift air brake</span>
@@ -307,5 +435,23 @@ function SystemPill({
       <small>{label}</small>
       <b>{value}</b>
     </span>
+  );
+}
+
+function ToggleRow({
+  label,
+  enabled,
+  onClick,
+}: {
+  label: string;
+  enabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button className="toggle-row" type="button" onClick={onClick}>
+      <span>{label}</span>
+      <b>{enabled ? "On" : "Off"}</b>
+      <i aria-hidden="true" className={enabled ? "enabled" : ""} />
+    </button>
   );
 }

@@ -21,8 +21,9 @@ It is not FAA-certified training software. It is designed to make flying feel go
 
 | Input | Action |
 | --- | --- |
-| Mouse / trackpad | Pitch and roll |
-| Arrow keys or WASD | Pitch and roll |
+| Arrow keys | Primary pitch and roll |
+| WASD | Optional pitch and roll assist |
+| Mouse / trackpad | Optional assist in Hybrid or Mouse mode |
 | Scroll wheel | Throttle |
 | `Space` | Boost / brake release intent |
 | `Shift` | Air brake |
@@ -32,6 +33,8 @@ It is not FAA-certified training software. It is designed to make flying feel go
 | `Q` / `E` | Yaw |
 | `Backspace` | Reset flight |
 | Gamepad axes/buttons | Polling-ready flight input |
+
+Control mode, sensitivity, inverted pitch, WASD assist, HUD layout, HUD opacity, and advanced telemetry tape can be customized in the in-game Settings section.
 
 ## Development
 

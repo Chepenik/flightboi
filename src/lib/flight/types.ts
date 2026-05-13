@@ -31,6 +31,10 @@ export type CameraMode =
   | "cockpit"
   | "free-look";
 
+export type ControlMode = "keyboard" | "hybrid" | "mouse";
+
+export type HudLayout = "clean" | "full" | "minimal";
+
 export type WeatherKind =
   | "clear"
   | "snow"
@@ -146,6 +150,22 @@ export type RealismSettings = {
   icing: boolean;
   crosswind: boolean;
   gyroDrift: boolean;
+};
+
+export type ControlSettings = {
+  mode: ControlMode;
+  pitchSensitivity: number;
+  rollSensitivity: number;
+  yawSensitivity: number;
+  mouseSensitivity: number;
+  invertPitch: boolean;
+  wasdEnabled: boolean;
+};
+
+export type HudSettings = {
+  layout: HudLayout;
+  opacity: number;
+  showAdvancedRibbon: boolean;
 };
 
 export type FlightTelemetry = {
