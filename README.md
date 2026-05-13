@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FlightBoi
 
-## Getting Started
+FlightBoi is a browser-native arcade flight game and aviation familiarization sandbox built with Next.js 16, TypeScript, Three.js, and React Three Fiber.
 
-First, run the development server:
+It is not FAA-certified training software. It is designed to make flying feel good quickly while teaching useful aviation intuition: airspeed awareness, pitch/throttle relationship, trim, flaps, stalls, crosswind awareness, energy management, terrain planning, and weight and balance effects.
+
+## Features
+
+- Playable 3D flight loop with mouse pitch/roll, keyboard support, scroll throttle, boost, air brake, flaps, trim, gear toggle, and gamepad polling.
+- Dual-layer flight model with arcade forgiveness and optional familiarization/near-sim effects.
+- Three aircraft: Falcon-X, Wraith Interceptor, and Atlas Cruiser.
+- Five procedural biomes: Alpine Dominion, Neon Pacific, Emerald Frontier, Crimson Dunes, and Azure Archipelago.
+- Game modes: Free Flight, Time Trial, Canyon Rush, Sky Delivery, Sky Academy, and Pilot Sandbox.
+- Sky Academy lessons with checkpoint progression, mistake coaching, and grading.
+- Cockpit camera with readable instrument overlay, radio stack visuals, switches, and aircraft-specific panel palette.
+- Weight and balance panel with passengers, cargo, fuel, CG visualization, and live handling impact.
+- VFR-style route lines, checkpoint rings, runway systems, windsock/tower/hangar details, weather atmosphere, clouds, particles, and adaptive quality.
+- Local settings persistence through browser local storage.
+
+## Controls
+
+| Input | Action |
+| --- | --- |
+| Mouse / trackpad | Pitch and roll |
+| Arrow keys or WASD | Pitch and roll |
+| Scroll wheel | Throttle |
+| `Space` | Boost / brake release intent |
+| `Shift` | Air brake |
+| `F` / `R` | Flaps down / up |
+| `I` / `K` | Trim up / down |
+| `G` | Toggle gear |
+| `Q` / `E` | Yaw |
+| `Backspace` | Reset flight |
+| Gamepad axes/buttons | Polling-ready flight input |
+
+## Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Verification
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+npm run type-check
+npm run build
+```
 
-## Learn More
+## Vercel Deployment
 
-To learn more about Next.js, take a look at the following resources:
+The app is compatible with Vercel as a standard Next.js application.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run build
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+No environment variables are required for the current single-player browser build.
 
-## Deploy on Vercel
+Future multiplayer, tournaments, wagers, and online leaderboards should introduce server-side routes, authenticated identities, anti-cheat validation, and wager compliance checks before deployment.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Architecture
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```text
+src/app                 Next.js App Router shell
+src/components/game     R3F scene, aircraft, world, HUD, cockpit, academy UI
+src/hooks               Browser/gamepad input
+src/lib/flight          Typed catalogs, persistent store, navigation, physics
+```
+
+The runtime is intentionally modular so the project can grow into multiplayer sessions, ghost runs, replay exports, procedural world expansion, authenticated leaderboards, and wagering workflows without rewriting the local flight loop.
