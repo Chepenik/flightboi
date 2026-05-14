@@ -32,7 +32,8 @@ It is not FAA-certified training software. It is designed to make flying feel go
 | `G` | Toggle gear |
 | `Q` / `E` | Yaw |
 | `Backspace` | Reset flight |
-| Gamepad axes/buttons | Polling-ready flight input |
+| `Escape` | Restore the interface after screenshot mode |
+| Gamepad axes/buttons | Polling-ready flight input when a connected pad is active |
 
 Control mode, sensitivity, inverted pitch, WASD assist, HUD layout, HUD opacity, and advanced telemetry tape can be customized in the in-game Settings section.
 

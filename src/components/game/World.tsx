@@ -1,8 +1,9 @@
 "use client";
 
 import { Billboard, Line, Sparkles } from "@react-three/drei";
+import { useFrame } from "@react-three/fiber";
 import { MutableRefObject, useLayoutEffect, useMemo, useRef } from "react";
-import { BackSide, InstancedMesh, MathUtils, Object3D } from "three";
+import { BackSide, Group, InstancedMesh, MathUtils, Object3D } from "three";
 import { AircraftProfile, CameraMode, GameModeId, MapProfile } from "@/lib/flight/types";
 import { FlightModelState } from "@/lib/flight/physics";
 import { FlightRoute } from "@/lib/flight/navigation";
@@ -152,11 +153,16 @@ export function FlightParticles({
 }) {
   const particleCount = map.id === "neon-pacific" ? 90 : map.id === "alpine-dominion" ? 130 : 70;
   const visible = cameraMode !== "cockpit";
+  const groupRef = useRef<Group>(null);
   const particleColor =
     map.id === "crimson-dunes" ? "#ffb15d" : map.id === "alpine-dominion" ? "#eff8ff" : aircraft.accent;
 
+  useFrame(() => {
+    groupRef.current?.position.copy(flight.current.position);
+  });
+
   return (
-    <group position={flight.current.position}>
+    <group ref={groupRef} position={flight.current.position}>
       {visible && (
         <Sparkles
           count={particleCount}

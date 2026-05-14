@@ -71,21 +71,25 @@ export function Hud() {
         <button type="button" onClick={() => setFpsLimiter(!fpsLimiter)} title="Toggle FPS limiter flag">
           <Pause size={15} /> {fpsLimiter ? "60 FPS" : "Unlocked"}
         </button>
-        <button type="button" onClick={() => setScreenshotMode(true)} title="Hide UI for screenshots">
+        <button
+          type="button"
+          onClick={() => setScreenshotMode(true)}
+          title="Hide UI for screenshots. Press Esc to restore the interface."
+        >
           <Map size={15} /> Shot
         </button>
       </div>
 
       {hudSettings.showAdvancedRibbon && (
-      <div className="academy-ribbon">
-        <span>VSI {telemetry.verticalSpeedFpm.toFixed(0)} fpm</span>
-        <span>AoA {telemetry.aoaDeg.toFixed(1)} deg</span>
-        <span>Trim {Math.round(telemetry.trim * 100)}%</span>
-        <span>Flaps {Math.round(telemetry.flaps * 100)}%</span>
-        <span>{telemetry.gearDown ? "Gear down" : "Gear up"}</span>
-        {realism.densityAltitude && <span>DA {telemetry.densityAltitudeFt.toFixed(0)} ft</span>}
-        {telemetry.stall && <b>STALL</b>}
-      </div>
+        <div className="academy-ribbon">
+          <span>VSI {telemetry.verticalSpeedFpm.toFixed(0)} fpm</span>
+          <span>AoA {telemetry.aoaDeg.toFixed(1)} deg</span>
+          <span>Trim {Math.round(telemetry.trim * 100)}%</span>
+          <span>Flaps {Math.round(telemetry.flaps * 100)}%</span>
+          <span>{telemetry.gearDown ? "Gear down" : "Gear up"}</span>
+          {realism.densityAltitude && <span>DA {telemetry.densityAltitudeFt.toFixed(0)} ft</span>}
+          {telemetry.stall && <b>STALL</b>}
+        </div>
       )}
     </section>
   );

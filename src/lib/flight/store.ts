@@ -121,7 +121,6 @@ export const useGameStore = create<GameStore>()(
       setPayload: (payload) =>
         set((state) => ({
           payload: { ...state.payload, ...payload },
-          revision: state.revision + 1,
         })),
       setTelemetry: (telemetry) => set({ telemetry }),
       setControlSettings: (settings) =>
@@ -156,8 +155,18 @@ export const useGameStore = create<GameStore>()(
         autopilot: state.autopilot,
         headingBug: state.headingBug,
         altitudeHoldFt: state.altitudeHoldFt,
-        screenshotMode: state.screenshotMode,
+      }),
+      merge: (persistedState, currentState) => ({
+        ...currentState,
+        ...(isPersistedGameState(persistedState) ? persistedState : {}),
+        screenshotMode: false,
+        telemetry: currentState.telemetry,
+        revision: currentState.revision,
       }),
     },
   ),
 );
+
+function isPersistedGameState(value: unknown): value is Partial<GameStore> {
+  return typeof value === "object" && value !== null;
+}

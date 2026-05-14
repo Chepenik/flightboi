@@ -22,6 +22,7 @@ const emptyInput = (): InputFrame => ({
 
 export function useFlightInput(): MutableRefObject<InputFrame> {
   const controls = useGameStore((state) => state.controls);
+  const setScreenshotMode = useGameStore((state) => state.setScreenshotMode);
   const inputRef = useRef<InputFrame>(emptyInput());
   const keysRef = useRef(new Set<string>());
   const mouseRef = useRef({ x: 0, y: 0, active: false });
@@ -46,9 +47,11 @@ export function useFlightInput(): MutableRefObject<InputFrame> {
       const mouseRoll = acceptsMouse && mouse.active ? mouse.x * controls.mouseSensitivity : 0;
       const arrowPitch = acceptsKeyboard ? keyboardPitch * controls.pitchSensitivity * invert : 0;
       const arrowRoll = acceptsKeyboard ? keyboardRoll * controls.rollSensitivity : 0;
+      const pitch = controls.mode === "hybrid" && keyboardPitch !== 0 ? arrowPitch : mousePitch + arrowPitch;
+      const roll = controls.mode === "hybrid" && keyboardRoll !== 0 ? arrowRoll : mouseRoll + arrowRoll;
 
-      inputRef.current.pitch = clamp(mousePitch + arrowPitch);
-      inputRef.current.roll = clamp(mouseRoll + arrowRoll);
+      inputRef.current.pitch = clamp(pitch);
+      inputRef.current.roll = clamp(roll);
       inputRef.current.yaw = clamp(yaw * controls.yawSensitivity);
       inputRef.current.boost = keys.has(" ");
       inputRef.current.brakeRelease = keys.has(" ");
@@ -57,8 +60,6 @@ export function useFlightInput(): MutableRefObject<InputFrame> {
       inputRef.current.trimDown = keys.has("k");
       inputRef.current.flapsDown = keys.has("f");
       inputRef.current.flapsUp = keys.has("r");
-      inputRef.current.gearToggle = keys.has("g");
-      inputRef.current.reset = keys.has("backspace");
     };
 
     const handlePointerMove = (event: PointerEvent) => {
@@ -75,11 +76,25 @@ export function useFlightInput(): MutableRefObject<InputFrame> {
       updateFromState();
     };
 
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("[data-flight-ui='true']")) return;
+      const activeElement = document.activeElement;
+      if (activeElement instanceof HTMLElement) activeElement.blur();
+    };
+
     const handleKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
-      if ([" ", "arrowup", "arrowdown", "arrowleft", "arrowright"].includes(key)) {
+      if (key === "escape") {
+        setScreenshotMode(false);
+        return;
+      }
+      if (shouldIgnoreKeyboardTarget(event.target)) return;
+      if ([" ", "arrowup", "arrowdown", "arrowleft", "arrowright", "backspace"].includes(key)) {
         event.preventDefault();
       }
+      if (!event.repeat && key === "g") inputRef.current.gearToggle = true;
+      if (!event.repeat && key === "backspace") inputRef.current.reset = true;
       keysRef.current.add(key);
       if (key === "=" || key === "+") inputRef.current.throttleDelta += 90;
       if (key === "-" || key === "_") inputRef.current.throttleDelta -= 90;
@@ -102,15 +117,31 @@ export function useFlightInput(): MutableRefObject<InputFrame> {
       const gamepads = navigator.getGamepads?.() ?? [];
       const pad = Array.from(gamepads).find(Boolean);
       if (!pad) return;
-      inputRef.current.roll = clamp(pad.axes[0] ?? inputRef.current.roll);
-      inputRef.current.pitch = clamp(pad.axes[1] ?? inputRef.current.pitch);
-      inputRef.current.yaw = clamp(pad.axes[2] ?? 0);
-      inputRef.current.throttleDelta += (-(pad.axes[3] ?? 0) + 0.02) * 4;
-      inputRef.current.boost = Boolean(pad.buttons[0]?.pressed);
-      inputRef.current.airBrake = Boolean(pad.buttons[1]?.pressed);
+      const rollAxis = gamepadAxis(pad.axes[0]);
+      const pitchAxis = gamepadAxis(pad.axes[1]);
+      const yawAxis = gamepadAxis(pad.axes[2]);
+      const throttleAxis = gamepadAxis(pad.axes[3]);
+      const boostPressed = Boolean(pad.buttons[0]?.pressed);
+      const brakePressed = Boolean(pad.buttons[1]?.pressed);
+      const isActive =
+        rollAxis !== 0 ||
+        pitchAxis !== 0 ||
+        yawAxis !== 0 ||
+        throttleAxis !== 0 ||
+        boostPressed ||
+        brakePressed;
+      if (!isActive) return;
+
+      inputRef.current.roll = strongerInput(inputRef.current.roll, rollAxis);
+      inputRef.current.pitch = strongerInput(inputRef.current.pitch, pitchAxis);
+      inputRef.current.yaw = strongerInput(inputRef.current.yaw, yawAxis);
+      inputRef.current.throttleDelta += -throttleAxis * 4;
+      inputRef.current.boost = inputRef.current.boost || boostPressed;
+      inputRef.current.airBrake = inputRef.current.airBrake || brakePressed;
     }, 32);
 
     window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerdown", handlePointerDown);
     window.addEventListener("pointerleave", handlePointerLeave);
     window.addEventListener("keydown", handleKeyDown, { passive: false });
     window.addEventListener("keyup", handleKeyUp);
@@ -119,16 +150,35 @@ export function useFlightInput(): MutableRefObject<InputFrame> {
     return () => {
       window.clearInterval(gamepadPoll);
       window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerdown", handlePointerDown);
       window.removeEventListener("pointerleave", handlePointerLeave);
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("wheel", handleWheel);
     };
-  }, [controls]);
+  }, [controls, setScreenshotMode]);
 
   return inputRef;
 }
 
 function clamp(value: number) {
   return Math.max(-1, Math.min(1, value));
+}
+
+function gamepadAxis(value: number | undefined) {
+  if (typeof value !== "number" || Math.abs(value) < 0.12) return 0;
+  return clamp(value);
+}
+
+function strongerInput(current: number, next: number) {
+  return Math.abs(next) > Math.abs(current) ? next : current;
+}
+
+function shouldIgnoreKeyboardTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+  return Boolean(
+    target.closest(
+      "button, input, select, textarea, [contenteditable='true'], [data-flight-ui='true']",
+    ),
+  );
 }

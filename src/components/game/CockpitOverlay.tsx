@@ -16,7 +16,7 @@ export function CockpitOverlay() {
       <div className="canopy-frame" />
       <div className="cockpit-panel" style={{ "--accent": aircraft.cockpit.instrumentColor } as CSSProperties}>
         <RoundInstrument label="ASI" value={telemetry.speedKt} min={0} max={aircraft.maxSpeed} unit="kt" />
-        <AttitudeInstrument roll={telemetry.gForce} pitch={telemetry.verticalSpeedFpm / 1200} />
+        <AttitudeInstrument bankDeg={telemetry.bankDeg} pitchDeg={telemetry.pitchDeg} />
         <RoundInstrument label="ALT" value={telemetry.altitudeFt} min={0} max={8500} unit="ft" />
         <RoundInstrument label="VSI" value={telemetry.verticalSpeedFpm} min={-2000} max={2000} unit="fpm" />
         <RoundInstrument label="HDG" value={telemetry.headingDeg} min={0} max={360} unit="deg" />
@@ -63,11 +63,14 @@ function RoundInstrument({
   );
 }
 
-function AttitudeInstrument({ roll, pitch }: { roll: number; pitch: number }) {
+function AttitudeInstrument({ bankDeg, pitchDeg }: { bankDeg: number; pitchDeg: number }) {
+  const pitchOffset = Math.max(-24, Math.min(24, pitchDeg * 1.2));
+  const bankAngle = Math.max(-60, Math.min(60, -bankDeg));
+
   return (
     <div className="attitude-instrument">
       <span>ATT</span>
-      <div className="attitude-ball" style={{ transform: `translateY(${Math.max(-24, Math.min(24, pitch * 18))}px) rotate(${(roll - 1) * 18}deg)` }}>
+      <div className="attitude-ball" style={{ transform: `translateY(${pitchOffset}px) rotate(${bankAngle}deg)` }}>
         <b />
       </div>
       <small>horizon</small>

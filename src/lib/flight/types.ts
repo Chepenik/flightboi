@@ -183,6 +183,8 @@ export type FlightTelemetry = {
   rpm: number;
   engineTemp: number;
   gForce: number;
+  pitchDeg: number;
+  bankDeg: number;
   stall: boolean;
   stress: number;
   score: number;

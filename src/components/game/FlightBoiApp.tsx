@@ -2,6 +2,7 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { useMemo } from "react";
+import { useShallow } from "zustand/react/shallow";
 import {
   Activity,
   Camera,
@@ -79,7 +80,28 @@ export default function FlightBoiApp() {
     setControlSettings,
     setHudSettings,
     restartFlight,
-  } = useGameStore();
+  } = useGameStore(
+    useShallow((state) => ({
+      aircraftId: state.aircraftId,
+      mapId: state.mapId,
+      modeId: state.modeId,
+      cameraMode: state.cameraMode,
+      realismPreset: state.realismPreset,
+      payload: state.payload,
+      controls: state.controls,
+      hudSettings: state.hudSettings,
+      screenshotMode: state.screenshotMode,
+      setAircraft: state.setAircraft,
+      setMap: state.setMap,
+      setMode: state.setMode,
+      setCameraMode: state.setCameraMode,
+      setRealismPreset: state.setRealismPreset,
+      setPayload: state.setPayload,
+      setControlSettings: state.setControlSettings,
+      setHudSettings: state.setHudSettings,
+      restartFlight: state.restartFlight,
+    })),
+  );
 
   const activeAircraft = useMemo(() => getAircraft(aircraftId), [aircraftId]);
   const activeMap = useMemo(() => getMap(mapId), [mapId]);

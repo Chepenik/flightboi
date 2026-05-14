@@ -38,15 +38,24 @@ export function FlightScene() {
   const map = useMemo(() => getMap(mapId), [mapId]);
   const route = useMemo(() => getRouteForMap(map, modeId), [map, modeId]);
   const flightRef = useRef<FlightModelState>(createInitialFlightState(aircraft, map, payload));
+  const payloadRef = useRef(payload);
   const aircraftGroup = useRef<Group>(null);
   const lastTelemetry = useRef(0);
   const flybyAnchor = useRef(new Vector3(-260, 120, 320));
   const { camera } = useThree();
 
   useEffect(() => {
-    flightRef.current = createInitialFlightState(aircraft, map, payload);
+    payloadRef.current = payload;
+  }, [payload]);
+
+  useEffect(() => {
+    flightRef.current.fuelPercent = payload.fuelPercent;
+  }, [payload.fuelPercent]);
+
+  useEffect(() => {
+    flightRef.current = createInitialFlightState(aircraft, map, payloadRef.current);
     lastTelemetry.current = 0;
-  }, [aircraft, map, payload, revision]);
+  }, [aircraft, map, revision]);
 
   useFrame((renderState, delta) => {
     const flight = flightRef.current;

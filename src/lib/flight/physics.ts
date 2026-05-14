@@ -28,7 +28,6 @@ export type FlightModelState = {
   checkpointDistance: number;
   message: string;
   lessonGrade: number;
-  lastGearToggle: boolean;
 };
 
 const forwardAxis = new Vector3(0, 0, -1);
@@ -72,7 +71,6 @@ export function createInitialFlightState(
     checkpointDistance: 9999,
     message: "Airborne. Arrow keys fly, scroll sets throttle.",
     lessonGrade: 100,
-    lastGearToggle: false,
   };
 }
 
@@ -115,8 +113,10 @@ export function simulateFlight(
   if (input.trimDown) state.trim = MathUtils.clamp(state.trim - dt * 0.34, -1, 1);
   if (input.flapsDown) state.flaps = MathUtils.clamp(state.flaps + dt * 0.7, 0, 1);
   if (input.flapsUp) state.flaps = MathUtils.clamp(state.flaps - dt * 0.7, 0, 1);
-  if (input.gearToggle && !state.lastGearToggle) state.gearDown = !state.gearDown;
-  state.lastGearToggle = input.gearToggle;
+  if (input.gearToggle) {
+    state.gearDown = !state.gearDown;
+    input.gearToggle = false;
+  }
 
   const rollAuthority =
     aircraft.rollRate * (1.05 - Math.abs(cgOffset) * 0.16) * MathUtils.clamp(state.speedKt / 140, 0.52, 1.4);
@@ -272,6 +272,9 @@ export function simulateFlight(
 
   const verticalSpeedFpm = state.velocity.y * 118.11;
   const headingDeg = headingFromQuaternion(state.quaternion);
+  scratchEuler.setFromQuaternion(state.quaternion, "YXZ");
+  const pitchDeg = MathUtils.radToDeg(scratchEuler.x);
+  const bankDeg = MathUtils.radToDeg(scratchEuler.z);
   const rpm = MathUtils.clamp(820 + state.throttle * 2200 + (boostActive ? 620 : 0), 700, 3800);
 
   if (stall) {
@@ -299,6 +302,8 @@ export function simulateFlight(
     rpm,
     engineTemp: state.engineTemp,
     gForce,
+    pitchDeg,
+    bankDeg,
     stall,
     stress,
     score: state.score,
@@ -329,6 +334,8 @@ export function defaultTelemetry(): FlightTelemetry {
     rpm: 0,
     engineTemp: 0,
     gForce: 1,
+    pitchDeg: 0,
+    bankDeg: 0,
     stall: false,
     stress: 0,
     score: 0,
