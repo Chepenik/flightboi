@@ -37,6 +37,8 @@ It is not FAA-certified training software. It is designed to make flying feel go
 
 Control mode, sensitivity, inverted pitch, WASD assist, HUD layout, HUD opacity, and advanced telemetry tape can be customized in the in-game Settings section.
 
+Easter egg: try typing `tron` during flight.
+
 ## Development
 
 ```bash

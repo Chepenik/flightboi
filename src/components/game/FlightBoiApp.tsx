@@ -17,9 +17,11 @@ import {
 } from "lucide-react";
 import { FlightCanvas } from "./FlightCanvas";
 import { Hud } from "./Hud";
+import { GridRunHud } from "./GridRunHud";
 import { CockpitOverlay } from "./CockpitOverlay";
 import { AcademyOverlay } from "./AcademyOverlay";
 import { MobileWarning } from "./MobileWarning";
+import { useEasterEggActivation } from "@/hooks/useEasterEggActivation";
 import { aircraft, gameModes, getAircraft, getMap, maps } from "@/lib/flight/catalog";
 import { useGameStore } from "@/lib/flight/store";
 import {
@@ -61,6 +63,8 @@ const hudLayouts: { id: HudLayout; label: string }[] = [
 ];
 
 export default function FlightBoiApp() {
+  useEasterEggActivation();
+
   const {
     aircraftId,
     mapId,
@@ -70,6 +74,7 @@ export default function FlightBoiApp() {
     payload,
     controls,
     hudSettings,
+    easterEggMode,
     screenshotMode,
     setAircraft,
     setMap,
@@ -90,6 +95,7 @@ export default function FlightBoiApp() {
       payload: state.payload,
       controls: state.controls,
       hudSettings: state.hudSettings,
+      easterEggMode: state.easterEggMode,
       screenshotMode: state.screenshotMode,
       setAircraft: state.setAircraft,
       setMap: state.setMap,
@@ -111,9 +117,11 @@ export default function FlightBoiApp() {
       <FlightCanvas />
 
       <div className="atmosphere-vignette" aria-hidden="true" />
-      <MobileWarning />
+      {easterEggMode === "none" && <MobileWarning />}
 
-      {!screenshotMode && (
+      {easterEggMode === "grid-run" && <GridRunHud />}
+
+      {!screenshotMode && easterEggMode === "none" && (
         <>
           <Hud />
           <CockpitOverlay />

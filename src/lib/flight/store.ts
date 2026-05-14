@@ -8,8 +8,10 @@ import {
   AircraftId,
   CameraMode,
   ControlSettings,
+  EasterEggMode,
   FlightTelemetry,
   GameModeId,
+  GridRunHudState,
   HudSettings,
   MapId,
   PayloadState,
@@ -32,6 +34,9 @@ type GameStore = {
   telemetry: FlightTelemetry;
   controls: ControlSettings;
   hudSettings: HudSettings;
+  easterEggMode: EasterEggMode;
+  gridRunHud: GridRunHudState;
+  gridRunRevision: number;
   quality: QualityPreset;
   music: boolean;
   fpsLimiter: boolean;
@@ -51,6 +56,10 @@ type GameStore = {
   setTelemetry: (telemetry: FlightTelemetry) => void;
   setControlSettings: (settings: Partial<ControlSettings>) => void;
   setHudSettings: (settings: Partial<HudSettings>) => void;
+  enterGridRun: () => void;
+  exitEasterEgg: () => void;
+  restartGridRun: () => void;
+  setGridRunHud: (hud: GridRunHudState) => void;
   setQuality: (quality: QualityPreset) => void;
   setMusic: (music: boolean) => void;
   setFpsLimiter: (fpsLimiter: boolean) => void;
@@ -84,6 +93,15 @@ const initialHudSettings: HudSettings = {
   showAdvancedRibbon: false,
 };
 
+const initialGridRunHud: GridRunHudState = {
+  score: 0,
+  combo: 1,
+  speed: 0,
+  boost: 1,
+  crashed: false,
+  message: "Arrow keys steer. Type tron to enter the grid.",
+};
+
 export const useGameStore = create<GameStore>()(
   persist(
     (set) => ({
@@ -98,6 +116,9 @@ export const useGameStore = create<GameStore>()(
       telemetry: defaultTelemetry(),
       controls: initialControls,
       hudSettings: initialHudSettings,
+      easterEggMode: "none",
+      gridRunHud: initialGridRunHud,
+      gridRunRevision: 0,
       quality: "adaptive",
       music: true,
       fpsLimiter: false,
@@ -127,6 +148,24 @@ export const useGameStore = create<GameStore>()(
         set((state) => ({ controls: { ...state.controls, ...settings } })),
       setHudSettings: (settings) =>
         set((state) => ({ hudSettings: { ...state.hudSettings, ...settings } })),
+      enterGridRun: () =>
+        set((state) => ({
+          easterEggMode: "grid-run",
+          gridRunHud: initialGridRunHud,
+          gridRunRevision: state.gridRunRevision + 1,
+          screenshotMode: false,
+        })),
+      exitEasterEgg: () =>
+        set({
+          easterEggMode: "none",
+          gridRunHud: initialGridRunHud,
+        }),
+      restartGridRun: () =>
+        set((state) => ({
+          gridRunHud: initialGridRunHud,
+          gridRunRevision: state.gridRunRevision + 1,
+        })),
+      setGridRunHud: (hud) => set({ gridRunHud: hud }),
       setQuality: (quality) => set({ quality }),
       setMusic: (music) => set({ music }),
       setFpsLimiter: (fpsLimiter) => set({ fpsLimiter }),
@@ -160,6 +199,9 @@ export const useGameStore = create<GameStore>()(
         ...currentState,
         ...(isPersistedGameState(persistedState) ? persistedState : {}),
         screenshotMode: false,
+        easterEggMode: "none",
+        gridRunHud: currentState.gridRunHud,
+        gridRunRevision: currentState.gridRunRevision,
         telemetry: currentState.telemetry,
         revision: currentState.revision,
       }),

@@ -5,6 +5,7 @@ import { ThreeEvent, useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef } from "react";
 import { Group, MathUtils, Object3D, Quaternion, Vector3 } from "three";
 import { AircraftModel } from "./AircraftModel";
+import { GridRunScene } from "./GridRunScene";
 import { CheckpointRings, FlightParticles, RunwaySystem, WorldGeometry } from "./World";
 import { useFlightInput } from "@/hooks/useFlightInput";
 import { getAircraft, getMap } from "@/lib/flight/catalog";
@@ -23,6 +24,14 @@ const right = new Vector3();
 const tempQuaternion = new Quaternion();
 
 export function FlightScene() {
+  const easterEggMode = useGameStore((state) => state.easterEggMode);
+
+  if (easterEggMode === "grid-run") return <GridRunScene />;
+
+  return <NormalFlightScene />;
+}
+
+function NormalFlightScene() {
   const inputRef = useFlightInput();
   const aircraftId = useGameStore((state) => state.aircraftId);
   const mapId = useGameStore((state) => state.mapId);

@@ -35,6 +35,8 @@ export type ControlMode = "keyboard" | "hybrid" | "mouse";
 
 export type HudLayout = "clean" | "full" | "minimal";
 
+export type EasterEggMode = "none" | "grid-run";
+
 export type WeatherKind =
   | "clear"
   | "snow"
@@ -166,6 +168,15 @@ export type HudSettings = {
   layout: HudLayout;
   opacity: number;
   showAdvancedRibbon: boolean;
+};
+
+export type GridRunHudState = {
+  score: number;
+  combo: number;
+  speed: number;
+  boost: number;
+  crashed: boolean;
+  message: string;
 };
 
 export type FlightTelemetry = {
