@@ -16,6 +16,7 @@ It is not FAA-certified training software. It is designed to make flying feel go
 - Weight and balance panel with passengers, cargo, fuel, CG visualization, and live handling impact.
 - VFR-style route lines, checkpoint rings, runway systems, windsock/tower/hangar details, weather atmosphere, clouds, particles, and adaptive quality.
 - Local settings persistence through browser local storage.
+- Dynamic Open Graph and Twitter preview images for polished sharing on social platforms.
 
 ## Controls
 
@@ -64,7 +65,7 @@ The app is compatible with Vercel as a standard Next.js application.
 npm run build
 ```
 
-No environment variables are required for the current single-player browser build.
+No environment variables are required for the current single-player browser build. Optionally set `NEXT_PUBLIC_SITE_URL` to the production origin, such as `https://your-domain.com`, so canonical and social preview URLs resolve to a custom domain instead of Vercel's generated project URL.
 
 Future multiplayer, tournaments, wagers, and online leaderboards should introduce server-side routes, authenticated identities, anti-cheat validation, and wager compliance checks before deployment.
 
