@@ -1,13 +1,14 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import {
   Activity,
   Camera,
   Gauge,
   GraduationCap,
+  Home,
   Keyboard,
   MousePointer2,
   Plane,
@@ -21,6 +22,7 @@ import { GridRunHud } from "./GridRunHud";
 import { CockpitOverlay } from "./CockpitOverlay";
 import { AcademyOverlay } from "./AcademyOverlay";
 import { MobileWarning } from "./MobileWarning";
+import { LaunchScreen } from "./LaunchScreen";
 import { useEasterEggActivation } from "@/hooks/useEasterEggActivation";
 import { aircraft, gameModes, getAircraft, getMap, maps } from "@/lib/flight/catalog";
 import { useGameStore } from "@/lib/flight/store";
@@ -63,7 +65,8 @@ const hudLayouts: { id: HudLayout; label: string }[] = [
 ];
 
 export default function FlightBoiApp() {
-  useEasterEggActivation();
+  const [hasLaunched, setHasLaunched] = useState(false);
+  useEasterEggActivation(hasLaunched);
 
   const {
     aircraftId,
@@ -84,6 +87,8 @@ export default function FlightBoiApp() {
     setPayload,
     setControlSettings,
     setHudSettings,
+    setScreenshotMode,
+    exitEasterEgg,
     restartFlight,
   } = useGameStore(
     useShallow((state) => ({
@@ -105,12 +110,28 @@ export default function FlightBoiApp() {
       setPayload: state.setPayload,
       setControlSettings: state.setControlSettings,
       setHudSettings: state.setHudSettings,
+      setScreenshotMode: state.setScreenshotMode,
+      exitEasterEgg: state.exitEasterEgg,
       restartFlight: state.restartFlight,
     })),
   );
 
   const activeAircraft = useMemo(() => getAircraft(aircraftId), [aircraftId]);
   const activeMap = useMemo(() => getMap(mapId), [mapId]);
+  const handleLaunch = useCallback(() => setHasLaunched(true), []);
+  const handleReturnToMenu = useCallback(() => {
+    setScreenshotMode(false);
+    exitEasterEgg();
+    setHasLaunched(false);
+  }, [exitEasterEgg, setScreenshotMode]);
+
+  if (!hasLaunched) {
+    return (
+      <main className="flight-shell launch-shell-only">
+        <LaunchScreen onLaunch={handleLaunch} />
+      </main>
+    );
+  }
 
   return (
     <main className="flight-shell">
@@ -152,9 +173,26 @@ export default function FlightBoiApp() {
               ))}
             </div>
 
-            <button className="icon-button" type="button" onClick={restartFlight} title="Restart flight">
-              <RotateCcw size={17} />
-            </button>
+            <div className="topbar-actions">
+              <button
+                className="icon-button menu-button"
+                type="button"
+                onClick={handleReturnToMenu}
+                title="Return to launch screen"
+                aria-label="Return to launch screen"
+              >
+                <Home size={17} />
+              </button>
+              <button
+                className="icon-button restart-button"
+                type="button"
+                onClick={restartFlight}
+                title="Restart flight"
+                aria-label="Restart flight"
+              >
+                <RotateCcw size={17} />
+              </button>
+            </div>
           </section>
 
           <aside className="left-panel control-panel" data-flight-ui="true" aria-label="Aircraft and world setup">

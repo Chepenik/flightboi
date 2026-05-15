@@ -5,13 +5,18 @@ import { useGameStore } from "@/lib/flight/store";
 
 const unlockCode = "tron";
 
-export function useEasterEggActivation() {
+export function useEasterEggActivation(enabled = true) {
   const easterEggMode = useGameStore((state) => state.easterEggMode);
   const enterGridRun = useGameStore((state) => state.enterGridRun);
   const exitEasterEgg = useGameStore((state) => state.exitEasterEgg);
   const bufferRef = useRef("");
 
   useEffect(() => {
+    if (!enabled) {
+      bufferRef.current = "";
+      return;
+    }
+
     const handleKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
 
@@ -35,7 +40,7 @@ export function useEasterEggActivation() {
 
     window.addEventListener("keydown", handleKeyDown, { passive: false });
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [easterEggMode, enterGridRun, exitEasterEgg]);
+  }, [easterEggMode, enabled, enterGridRun, exitEasterEgg]);
 }
 
 function shouldIgnoreEasterEggTarget(target: EventTarget | null) {

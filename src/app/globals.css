@@ -36,6 +36,13 @@ button {
   color: inherit;
 }
 
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #f7fbff;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 5px rgba(125, 231, 255, 0.18);
+}
+
 .flight-shell {
   position: relative;
   width: 100vw;
@@ -61,6 +68,412 @@ button {
   z-index: 20;
   color: var(--muted);
   background: #05060a;
+}
+
+.launch-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 24;
+  min-height: 100vh;
+  overflow: auto;
+  background:
+    linear-gradient(180deg, rgba(6, 9, 14, 0.46), rgba(6, 7, 10, 0.95) 74%),
+    linear-gradient(120deg, #172331 0%, #07090e 44%, #241217 100%);
+}
+
+.launch-sky {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+.launch-sky::before {
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(90deg, transparent 0 95px, rgba(255, 255, 255, 0.035) 96px 97px),
+    linear-gradient(180deg, rgba(125, 231, 255, 0.15), transparent 36%);
+  content: "";
+}
+
+.launch-hangar-frame {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.58), transparent 18%, transparent 82%, rgba(0, 0, 0, 0.58)),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.64), transparent 24%, transparent 72%, rgba(0, 0, 0, 0.72));
+}
+
+.launch-hangar-frame::before,
+.launch-hangar-frame::after {
+  position: absolute;
+  top: -16vh;
+  bottom: 0;
+  width: 34vw;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    repeating-linear-gradient(72deg, rgba(255, 255, 255, 0.06) 0 1px, transparent 1px 54px),
+    rgba(3, 5, 8, 0.2);
+  content: "";
+}
+
+.launch-hangar-frame::before {
+  left: -18vw;
+  transform: skewX(-13deg);
+}
+
+.launch-hangar-frame::after {
+  right: -18vw;
+  transform: skewX(13deg);
+}
+
+.launch-runway {
+  position: absolute;
+  left: 50%;
+  bottom: -22vh;
+  width: min(720px, 78vw);
+  height: 58vh;
+  transform: translateX(-50%) perspective(620px) rotateX(64deg);
+  border-left: 1px solid rgba(125, 231, 255, 0.26);
+  border-right: 1px solid rgba(255, 196, 107, 0.22);
+  background:
+    repeating-linear-gradient(90deg, transparent 0 44px, rgba(255, 255, 255, 0.05) 45px 46px),
+    linear-gradient(90deg, transparent 0 49%, rgba(255, 255, 255, 0.42) 49.6% 50.4%, transparent 51%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.68));
+  box-shadow: 0 -24px 90px rgba(125, 231, 255, 0.12);
+}
+
+.launch-runway span {
+  position: absolute;
+  bottom: 12%;
+  width: 8px;
+  height: 8px;
+  background: #7de7ff;
+  box-shadow: 0 0 22px rgba(125, 231, 255, 0.88);
+}
+
+.launch-runway span:nth-child(1),
+.launch-runway span:nth-child(3) {
+  left: 13%;
+}
+
+.launch-runway span:nth-child(2),
+.launch-runway span:nth-child(4) {
+  right: 13%;
+}
+
+.launch-runway span:nth-child(3),
+.launch-runway span:nth-child(4) {
+  bottom: 44%;
+  background: #ffc46b;
+  box-shadow: 0 0 22px rgba(255, 196, 107, 0.84);
+}
+
+.launch-plane-silhouette {
+  position: absolute;
+  right: 9vw;
+  top: 16vh;
+  color: rgba(255, 255, 255, 0.16);
+  transform: rotate(-18deg);
+  animation: launch-drift 8s ease-in-out infinite alternate;
+}
+
+.launch-shell {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 18px;
+  width: min(1180px, calc(100vw - 48px));
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 28px 0;
+  align-content: center;
+}
+
+.launch-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 22px;
+  padding: 18px;
+  border: 1px solid var(--panel-line);
+  background: rgba(4, 7, 11, 0.52);
+  box-shadow: 0 32px 120px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(22px);
+}
+
+.launch-brand {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  min-width: 0;
+}
+
+.launch-brand-mark {
+  display: grid;
+  flex: 0 0 auto;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border: 1px solid rgba(125, 231, 255, 0.34);
+  background: rgba(125, 231, 255, 0.1);
+  box-shadow: inset 0 0 28px rgba(125, 231, 255, 0.08);
+}
+
+.launch-brand p {
+  margin: 0 0 4px;
+  color: #7de7ff;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.launch-brand h1 {
+  margin: 0;
+  color: #fff;
+  font-size: 76px;
+  font-weight: 780;
+  letter-spacing: 0;
+  line-height: 0.9;
+}
+
+.launch-brand span {
+  display: block;
+  max-width: 620px;
+  margin-top: 10px;
+  color: rgba(242, 247, 255, 0.78);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.launch-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.launch-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-width: 144px;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  font-weight: 760;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.launch-button:hover {
+  transform: translateY(-1px);
+}
+
+.launch-button.primary {
+  border-color: rgba(125, 231, 255, 0.48);
+  background: linear-gradient(135deg, #7de7ff, #f7fbff);
+  color: #061019;
+}
+
+.launch-button.secondary {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.launch-button.secondary:hover {
+  border-color: rgba(255, 196, 107, 0.5);
+  background: rgba(255, 196, 107, 0.14);
+}
+
+.launch-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.78fr) minmax(420px, 1.22fr);
+  grid-template-areas:
+    "summary aircraft"
+    "systems biome"
+    "systems modes";
+  gap: 14px;
+}
+
+.launch-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--panel-line);
+  background: rgba(5, 9, 14, 0.68);
+  box-shadow: 0 22px 74px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(20px);
+}
+
+.launch-summary {
+  grid-area: summary;
+}
+
+.launch-loadout {
+  grid-area: aircraft;
+}
+
+.launch-biomes {
+  grid-area: biome;
+}
+
+.launch-modes {
+  grid-area: modes;
+}
+
+.launch-systems {
+  grid-area: systems;
+  align-content: start;
+}
+
+.launch-panel-heading,
+.launch-desktop-note {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.launch-panel-heading > span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.launch-panel-heading strong {
+  display: block;
+  font-size: 13px;
+}
+
+.launch-panel-heading small,
+.launch-selection small,
+.launch-mode small,
+.launch-pill small,
+.launch-summary p,
+.launch-desktop-note span,
+.launch-metric small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.launch-summary > strong {
+  font-size: 28px;
+  line-height: 1.05;
+}
+
+.launch-summary p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.launch-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.launch-metric {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid var(--panel-line);
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.launch-metric b {
+  overflow: hidden;
+  color: #fff;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+.launch-desktop-note {
+  padding: 10px;
+  border: 1px solid rgba(255, 196, 107, 0.22);
+  background: rgba(255, 196, 107, 0.08);
+}
+
+.launch-option-grid,
+.launch-pill-row {
+  display: grid;
+  gap: 8px;
+}
+
+.aircraft-launch-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.map-launch-grid,
+.mode-launch-grid,
+.launch-pill-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.launch-selection,
+.launch-mode,
+.launch-pill {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  min-height: 70px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.055);
+  color: #fff;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    transform 150ms ease;
+}
+
+.launch-selection {
+  border-left: 3px solid var(--accent);
+}
+
+.launch-selection:hover,
+.launch-selection.active,
+.launch-mode:hover,
+.launch-mode.active,
+.launch-pill:hover,
+.launch-pill.active {
+  border-color: color-mix(in srgb, var(--accent, #7de7ff), white 18%);
+  background: rgba(255, 255, 255, 0.13);
+  transform: translateY(-1px);
+}
+
+.launch-selection span,
+.launch-mode span,
+.launch-pill span {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.launch-mode.active,
+.launch-pill.active {
+  border-color: rgba(125, 231, 255, 0.46);
+  background: rgba(125, 231, 255, 0.13);
+}
+
+.launch-pill {
+  min-height: 62px;
 }
 
 .atmosphere-vignette {
@@ -192,6 +605,12 @@ button {
   place-items: center;
   border: 1px solid var(--panel-line);
   background: rgba(255, 255, 255, 0.06);
+}
+
+.topbar-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .control-panel {
@@ -1172,7 +1591,7 @@ button {
     justify-items: stretch;
   }
 
-  .icon-button {
+  .restart-button {
     display: none;
   }
 
@@ -1249,6 +1668,103 @@ button {
   .grid-run-metrics {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .topbar-actions {
+    position: absolute;
+    right: 12px;
+    top: 12px;
+  }
+}
+
+@media (max-width: 980px) {
+  .launch-shell {
+    width: min(720px, calc(100vw - 28px));
+    padding: 18px 0;
+    align-content: start;
+  }
+
+  .launch-hero {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .launch-actions {
+    justify-content: stretch;
+  }
+
+  .launch-button {
+    flex: 1 1 180px;
+  }
+
+  .launch-brand h1 {
+    font-size: 58px;
+  }
+
+  .launch-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "summary"
+      "aircraft"
+      "biome"
+      "modes"
+      "systems";
+  }
+
+  .aircraft-launch-grid,
+  .map-launch-grid,
+  .mode-launch-grid,
+  .launch-pill-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .launch-shell {
+    width: calc(100vw - 20px);
+    padding: 10px 0;
+  }
+
+  .launch-hero,
+  .launch-panel {
+    padding: 12px;
+  }
+
+  .launch-brand {
+    align-items: flex-start;
+  }
+
+  .launch-brand-mark {
+    width: 46px;
+    height: 46px;
+  }
+
+  .launch-brand h1 {
+    font-size: 44px;
+  }
+
+  .launch-brand span {
+    font-size: 13px;
+  }
+
+  .launch-actions {
+    display: grid;
+  }
+
+  .launch-button {
+    width: 100%;
+  }
+
+  .aircraft-launch-grid,
+  .map-launch-grid,
+  .mode-launch-grid,
+  .launch-pill-row,
+  .launch-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .launch-plane-silhouette {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1259,5 +1775,15 @@ button {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+  }
+}
+
+@keyframes launch-drift {
+  from {
+    transform: translate3d(0, 0, 0) rotate(-18deg);
+  }
+
+  to {
+    transform: translate3d(-26px, 14px, 0) rotate(-12deg);
   }
 }

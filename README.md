@@ -6,6 +6,7 @@ It is not FAA-certified training software. It is designed to make flying feel go
 
 ## Features
 
+- Cinematic launch screen with Play, Quick Start, and pre-flight choices for aircraft, biome, game mode, realism, and controls.
 - Playable 3D flight loop with mouse pitch/roll, keyboard support, scroll throttle, boost, air brake, flaps, trim, gear toggle, and gamepad polling.
 - Dual-layer flight model with arcade forgiveness and optional familiarization/near-sim effects.
 - Three aircraft: Falcon-X, Wraith Interceptor, and Atlas Cruiser.
@@ -37,6 +38,8 @@ It is not FAA-certified training software. It is designed to make flying feel go
 | Gamepad axes/buttons | Polling-ready flight input when a connected pad is active |
 
 Control mode, sensitivity, inverted pitch, WASD assist, HUD layout, HUD opacity, and advanced telemetry tape can be customized in the in-game Settings section.
+
+The public first-load experience opens on the FlightBoi launch screen. Use Play with the selected loadout or Quick Start to get flying immediately, then use the home button in the in-game command deck to return to the launch screen.
 
 Easter egg: try typing `tron` during flight.
 
