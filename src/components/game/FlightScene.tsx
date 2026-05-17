@@ -8,7 +8,7 @@ import { AircraftModel } from "./AircraftModel";
 import { GridRunScene } from "./GridRunScene";
 import { CheckpointRings, FlightParticles, RunwaySystem, WorldGeometry } from "./World";
 import { useFlightInput } from "@/hooks/useFlightInput";
-import { getAircraft, getMap } from "@/lib/flight/catalog";
+import { getAircraft, getMap, getMode } from "@/lib/flight/catalog";
 import { getRouteForMap } from "@/lib/flight/navigation";
 import { createInitialFlightState, FlightModelState, simulateFlight } from "@/lib/flight/physics";
 import { useGameStore } from "@/lib/flight/store";
@@ -40,16 +40,20 @@ function NormalFlightScene() {
   const payload = useGameStore((state) => state.payload);
   const realism = useGameStore((state) => state.realism);
   const setTelemetry = useGameStore((state) => state.setTelemetry);
+  const completeRun = useGameStore((state) => state.completeRun);
+  const clearRunSummary = useGameStore((state) => state.clearRunSummary);
   const revision = useGameStore((state) => state.revision);
   const quality = useGameStore((state) => state.quality);
   const checkpointIndex = useGameStore((state) => state.telemetry.checkpointIndex);
   const aircraft = useMemo(() => getAircraft(aircraftId), [aircraftId]);
   const map = useMemo(() => getMap(mapId), [mapId]);
+  const mode = useMemo(() => getMode(modeId), [modeId]);
   const route = useMemo(() => getRouteForMap(map, modeId), [map, modeId]);
-  const flightRef = useRef<FlightModelState>(createInitialFlightState(aircraft, map, payload));
+  const flightRef = useRef<FlightModelState>(createInitialFlightState(aircraft, map, payload, modeId));
   const payloadRef = useRef(payload);
   const aircraftGroup = useRef<Group>(null);
   const lastTelemetry = useRef(0);
+  const lastCompletedCheckpoint = useRef(0);
   const flybyAnchor = useRef(new Vector3(-260, 120, 320));
   const { camera } = useThree();
 
@@ -62,17 +66,20 @@ function NormalFlightScene() {
   }, [payload.fuelPercent]);
 
   useEffect(() => {
-    flightRef.current = createInitialFlightState(aircraft, map, payloadRef.current);
+    flightRef.current = createInitialFlightState(aircraft, map, payloadRef.current, modeId);
     lastTelemetry.current = 0;
-  }, [aircraft, map, revision]);
+    lastCompletedCheckpoint.current = 0;
+  }, [aircraft, map, modeId, revision]);
 
   useFrame((renderState, delta) => {
     const flight = flightRef.current;
     const input = inputRef.current;
 
     if (input.reset) {
-      flightRef.current = createInitialFlightState(aircraft, map, payload);
+      flightRef.current = createInitialFlightState(aircraft, map, payload, modeId);
       input.reset = false;
+      lastCompletedCheckpoint.current = 0;
+      clearRunSummary();
       return;
     }
 
@@ -82,6 +89,27 @@ function NormalFlightScene() {
       { aircraft, map, payload, realism, modeId },
       delta,
     );
+
+    if (telemetry.runComplete && telemetry.checkpointIndex !== lastCompletedCheckpoint.current) {
+      lastCompletedCheckpoint.current = telemetry.checkpointIndex;
+      completeRun({
+        modeId,
+        modeName: mode.name,
+        aircraftId,
+        aircraftName: aircraft.name,
+        mapId,
+        mapName: map.name,
+        score: telemetry.score,
+        combo: telemetry.combo,
+        streak: telemetry.streak,
+        nearMisses: telemetry.nearMissCount,
+        checkpoints: telemetry.checkpointIndex,
+        elapsed: telemetry.elapsed,
+        medal: telemetry.medal,
+        grade: telemetry.grade,
+        feedback: runFeedback(modeId, telemetry.grade, telemetry.nearMissCount, telemetry.elapsed),
+      });
+    }
 
     if (aircraftGroup.current) {
       aircraftGroup.current.position.copy(flight.position);
@@ -165,9 +193,12 @@ function updateCamera({
   right.copy(rightAxis).applyQuaternion(flight.quaternion).normalize();
 
   const speedRatio = MathUtils.clamp(flight.speedKt / aircraft.maxSpeed, 0, 1.25);
+  const boostKick = flight.boostActive ? 0.18 : 0;
   const shake =
     Math.sin(elapsed * 24) * aircraft.cameraShake * speedRatio * 0.35 +
-    Math.sin(elapsed * 41) * aircraft.cameraShake * speedRatio * 0.12;
+    Math.sin(elapsed * 41) * aircraft.cameraShake * speedRatio * 0.12 +
+    Math.sin(elapsed * 58) * flight.shake * 1.9 +
+    Math.sin(elapsed * 83) * flight.shake * 0.9;
   const lag = MathUtils.clamp(delta * 3.6, 0.02, 0.18);
 
   if (cameraMode === "external") {
@@ -209,7 +240,7 @@ function updateCamera({
   } else {
     cameraTarget
       .copy(flight.position)
-      .addScaledVector(forward, -118 - speedRatio * 34)
+      .addScaledVector(forward, -118 - speedRatio * 48 - boostKick * 30)
       .addScaledVector(upAxis, 33 + speedRatio * 16)
       .addScaledVector(right, -flight.quaternion.z * 42);
   }
@@ -221,7 +252,7 @@ function updateCamera({
     .addScaledVector(forward, 190 + speedRatio * 120)
     .addScaledVector(upAxis, 9 + shake * 0.2);
   camera.lookAt(lookTarget);
-  setCameraFov(camera, MathUtils.lerp(62, cameraMode === "cinematic" ? 86 : 76, speedRatio));
+  setCameraFov(camera, MathUtils.lerp(62, cameraMode === "cinematic" ? 89 : 80, speedRatio + boostKick));
 }
 
 function setCameraFov(camera: Object3D & { fov?: number; updateProjectionMatrix?: () => void }, fov: number) {
@@ -232,4 +263,21 @@ function setCameraFov(camera: Object3D & { fov?: number; updateProjectionMatrix?
 
 export function stopPropagation(event: ThreeEvent<PointerEvent>) {
   event.stopPropagation();
+}
+
+function runFeedback(modeId: string, grade: string, nearMisses: number, elapsed: number) {
+  if (grade === "Ace") return "Ace pace. Push for cleaner gate centers or try the Wraith on a harder map.";
+  if (modeId === "sky-delivery") return "Cargo delivered. Higher medals come from smoother G, not just speed.";
+  if (modeId === "canyon-rush") {
+    return nearMisses > 3
+      ? "That line was spicy. Keep it low and reduce wasted air brake."
+      : "Route clear. The canyon pays better when you skim lower.";
+  }
+  if (modeId === "time-trial") {
+    return elapsed < 85
+      ? "Fast loop. Chain boost exits for a medal upgrade."
+      : "Route clear. Earlier boost exits will cut the next lap down.";
+  }
+  if (modeId === "sky-academy") return "Lesson loop complete. Try preserving more grade through each gate.";
+  return "Loop complete. Change aircraft, map, or realism to make the same route feel new.";
 }

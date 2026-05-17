@@ -2,6 +2,8 @@ import { Euler, MathUtils, Quaternion, Vector3 } from "three";
 import { getRouteForMap } from "./navigation";
 import {
   AircraftProfile,
+  FlightEventKind,
+  FlightMedal,
   FlightTelemetry,
   InputFrame,
   MapProfile,
@@ -24,10 +26,25 @@ export type FlightModelState = {
   elapsed: number;
   score: number;
   combo: number;
+  streak: number;
   checkpointIndex: number;
   checkpointDistance: number;
   message: string;
   lessonGrade: number;
+  event: FlightEventKind;
+  eventLabel: string;
+  eventIntensity: number;
+  eventTimer: number;
+  boostActive: boolean;
+  shake: number;
+  thrill: number;
+  nearMissCount: number;
+  completedRuns: number;
+  runComplete: boolean;
+  lastNearMissIndex: number;
+  lowAltitudeCooldown: number;
+  landingCooldown: number;
+  wasStalled: boolean;
 };
 
 const forwardAxis = new Vector3(0, 0, -1);
@@ -41,19 +58,34 @@ const scratchEuler = new Euler();
 const scratchQuaternion = new Quaternion();
 const scratchVec = new Vector3();
 
+type ModeTuning = {
+  gateRadius: number;
+  checkpointScore: number;
+  comboGain: number;
+  comboDecay: number;
+  completionBonus: number;
+  speedBonus: number;
+  lowAltitudeBonus: number;
+  timePressure: number;
+};
+
 export function createInitialFlightState(
   aircraft: AircraftProfile,
   map: MapProfile,
   payload: PayloadState,
+  modeId = "free-flight",
 ): FlightModelState {
-  const headingRad = MathUtils.degToRad(map.runwayHeading);
+  const startPosition = new Vector3(0, 260, 560);
+  const firstWaypoint = getRouteForMap(map, modeId).waypoints[0];
+  const routeVector = firstWaypoint.clone().sub(startPosition).normalize();
+  const headingRad = -Math.atan2(routeVector.x, -routeVector.z);
   const initialQuaternion = new Quaternion().setFromEuler(new Euler(0, headingRad, 0, "YXZ"));
   const fuelWeightPenalty = 1 + (payload.fuelPercent - 55) / 420;
   const startSpeed = Math.min(aircraft.cruiseSpeed * 0.74, aircraft.maxSpeed * 0.54);
   const forward = forwardAxis.clone().applyQuaternion(initialQuaternion);
 
   return {
-    position: new Vector3(0, 260, 560),
+    position: startPosition,
     velocity: forward.multiplyScalar(startSpeed * 0.72),
     quaternion: initialQuaternion,
     speedKt: startSpeed / fuelWeightPenalty,
@@ -67,10 +99,25 @@ export function createInitialFlightState(
     elapsed: 0,
     score: 0,
     combo: 1,
+    streak: 0,
     checkpointIndex: 0,
     checkpointDistance: 9999,
-    message: "Airborne. Arrow keys fly, scroll sets throttle.",
+    message: "Airborne. Follow the first glowing gate.",
     lessonGrade: 100,
+    event: "none",
+    eventLabel: "",
+    eventIntensity: 0,
+    eventTimer: 0,
+    boostActive: false,
+    shake: 0,
+    thrill: 0,
+    nearMissCount: 0,
+    completedRuns: 0,
+    runComplete: false,
+    lastNearMissIndex: -1,
+    lowAltitudeCooldown: 0,
+    landingCooldown: 0,
+    wasStalled: false,
   };
 }
 
@@ -92,6 +139,7 @@ export function simulateFlight(
 ): FlightTelemetry {
   const dt = Math.min(rawDelta, 1 / 24);
   const { aircraft, map, payload, realism, modeId } = context;
+  const tuning = modeTuningFor(modeId);
   const massFactor = MathUtils.clamp(payloadMassKg(aircraft, payload) / aircraft.mass, 1, 1.85);
   const cgOffset = (payload.cgPercent - 50) / 50;
   const densityAltitudeFt =
@@ -105,9 +153,32 @@ export function simulateFlight(
   const trimAssist = realism.trim ? state.trim * 0.22 : 0;
   const boostActive = input.boost && state.boost > 0.04;
   const airBrake = input.airBrake ? 1 : 0;
+  const boostStarted = boostActive && !state.boostActive;
+
+  const emitEvent = (event: FlightEventKind, label: string, intensity = 0.55) => {
+    state.event = event;
+    state.eventLabel = label;
+    state.eventIntensity = intensity;
+    state.eventTimer = 0.72;
+    state.shake = Math.max(state.shake, intensity);
+  };
+
+  const addScore = (amount: number) => {
+    state.score += Math.max(0, Math.round(amount));
+  };
 
   state.elapsed += dt;
+  state.eventTimer = Math.max(0, state.eventTimer - dt);
+  state.eventIntensity = state.eventTimer > 0 ? state.eventIntensity : 0;
+  state.shake = Math.max(0, state.shake - dt * 1.45);
+  state.lowAltitudeCooldown = Math.max(0, state.lowAltitudeCooldown - dt);
+  state.landingCooldown = Math.max(0, state.landingCooldown - dt);
+  state.runComplete = false;
   state.throttle = MathUtils.clamp(state.throttle + input.throttleDelta * 0.0018, 0, 1);
+
+  if (boostStarted) {
+    emitEvent("boost", "Boost burn. Hold the line.", 0.68);
+  }
 
   if (input.trimUp) state.trim = MathUtils.clamp(state.trim + dt * 0.34, -1, 1);
   if (input.trimDown) state.trim = MathUtils.clamp(state.trim - dt * 0.34, -1, 1);
@@ -191,7 +262,18 @@ export function simulateFlight(
       scratchQuaternion.setFromAxisAngle(rightAxis, -MathUtils.degToRad(16) * dt),
     );
     state.lessonGrade = Math.max(0, state.lessonGrade - dt * 9);
+    state.streak = 0;
+    state.combo = Math.max(1, state.combo - dt * 0.7);
+    if (!state.wasStalled) {
+      emitEvent("stall", "Stall warning. Nose down, wings level.", 0.78);
+    }
+  } else if (state.wasStalled && state.speedKt > aircraft.stallSpeed * 1.22) {
+    const recoveryBonus = 160 * state.combo;
+    addScore(recoveryBonus);
+    state.combo = Math.min(10.5, state.combo + 0.18);
+    emitEvent("recovery", `Clean recovery +${Math.round(recoveryBonus)}`, 0.58);
   }
+  state.wasStalled = stall;
 
   const liftReserve = MathUtils.clamp(
     (state.speedKt - aircraft.stallSpeed * 0.72) / (aircraft.stallSpeed * 1.8),
@@ -219,11 +301,20 @@ export function simulateFlight(
     state.velocity.y = Math.max(0, state.velocity.y) * 0.18;
     state.speedKt *= landingFirmness > 18 ? 0.82 : 0.95;
     state.combo = 1;
+    state.streak = 0;
     state.lessonGrade = Math.max(0, state.lessonGrade - Math.max(0, landingFirmness - 6) * 0.35);
-    state.message =
-      landingFirmness > 18
-        ? "Firm touchdown. Stabilize earlier: speed, descent rate, centerline."
-        : "Smooth runway contact. Hold attitude and bleed speed.";
+    if (state.landingCooldown === 0) {
+      if (landingFirmness > 18) {
+        state.message = "Firm bounce. Recover attitude, add a little power, keep flying.";
+        emitEvent("impact", "Firm contact. Recover, do not quit.", 0.82);
+      } else {
+        const landingBonus = 240 + Math.max(0, 130 - state.speedKt);
+        addScore(landingBonus);
+        state.message = "Smooth runway contact. Hold attitude and bleed speed.";
+        emitEvent("landing", `Smooth touchdown +${Math.round(landingBonus)}`, 0.46);
+      }
+      state.landingCooldown = 3.5;
+    }
   }
 
   if (boostActive) {
@@ -240,25 +331,6 @@ export function simulateFlight(
     1.15,
   );
 
-  const route = getRouteForMap(map, modeId);
-  const activeWaypoint = route.waypoints[state.checkpointIndex % route.waypoints.length];
-  state.checkpointDistance = state.position.distanceTo(activeWaypoint);
-  if (state.checkpointDistance < (modeId === "canyon-rush" ? 72 : 92)) {
-    state.score += Math.round(200 * state.combo + Math.max(0, 520 - state.checkpointDistance));
-    state.combo = Math.min(9, state.combo + 0.35);
-    state.checkpointIndex += 1;
-    state.boost = Math.min(1, state.boost + 0.22);
-    state.message = checkpointMessage(modeId, state.checkpointIndex);
-  } else {
-    state.combo = Math.max(1, state.combo - dt * 0.045);
-  }
-
-  const terrainRush = state.position.y < 80 && state.speedKt > 180;
-  if (terrainRush) {
-    state.score += Math.round(dt * state.speedKt * 0.4);
-    state.combo = Math.min(9, state.combo + dt * 0.12);
-  }
-
   const gForce = MathUtils.clamp(
     1 + Math.abs(rollInput) * 1.4 + Math.max(0, pitchInput) * 1.8 + state.speedKt / 920,
     0.2,
@@ -271,6 +343,72 @@ export function simulateFlight(
   }
 
   const verticalSpeedFpm = state.velocity.y * 118.11;
+  const route = getRouteForMap(map, modeId);
+  const activeWaypoint = route.waypoints[state.checkpointIndex % route.waypoints.length];
+  state.checkpointDistance = weightedGateDistance(state.position, activeWaypoint);
+  const nearGate =
+    state.checkpointDistance < tuning.gateRadius + 42 &&
+    state.checkpointDistance > tuning.gateRadius &&
+    state.lastNearMissIndex !== state.checkpointIndex;
+
+  if (nearGate && state.speedKt > aircraft.stallSpeed * 1.8) {
+    const nearMissBonus = (90 + state.speedKt * 0.28) * state.combo;
+    addScore(nearMissBonus);
+    state.nearMissCount += 1;
+    state.lastNearMissIndex = state.checkpointIndex;
+    state.combo = Math.min(10.5, state.combo + 0.12);
+    emitEvent("near-miss", `Gate edge skim +${Math.round(nearMissBonus)}`, 0.52);
+  }
+
+  if (state.checkpointDistance < tuning.gateRadius) {
+    const timeBonus = Math.max(0, 720 - state.elapsed * tuning.timePressure);
+    const speedBonus = Math.max(0, state.speedKt - aircraft.cruiseSpeed * 0.72) * tuning.speedBonus;
+    const smoothBonus =
+      modeId === "sky-delivery" && gForce < 2.45 && Math.abs(verticalSpeedFpm) < 680 ? 240 : 0;
+    const academyBonus =
+      modeId === "sky-academy" && !stall && Math.abs(state.speedKt - aircraft.cruiseSpeed) < 90 ? 180 : 0;
+    const checkpointScore =
+      (tuning.checkpointScore + speedBonus + timeBonus + smoothBonus + academyBonus) * state.combo;
+
+    addScore(checkpointScore);
+    state.streak += 1;
+    state.combo = Math.min(11, state.combo + tuning.comboGain + Math.min(0.22, state.streak * 0.012));
+    state.checkpointIndex += 1;
+    state.boost = Math.min(1, state.boost + (modeId === "time-trial" ? 0.3 : 0.23));
+    state.lessonGrade = Math.min(100, state.lessonGrade + (modeId === "sky-academy" ? 1.8 : 0.6));
+
+    if (state.checkpointIndex % route.waypoints.length === 0) {
+      const completionBonus =
+        tuning.completionBonus + Math.max(0, 1800 - state.elapsed * tuning.timePressure) * state.combo;
+      addScore(completionBonus);
+      state.completedRuns += 1;
+      state.runComplete = true;
+      state.boost = 1;
+      state.message = `Route clear. ${gradeForMedal(medalForScore(modeId, state.score, state.elapsed))} run banked.`;
+      emitEvent("run-complete", `Route clear +${Math.round(completionBonus)}`, 0.9);
+    } else {
+      state.message = checkpointMessage(modeId, state.checkpointIndex, Math.round(checkpointScore));
+      emitEvent("checkpoint", `Gate ${state.checkpointIndex} +${Math.round(checkpointScore)}`, 0.66);
+    }
+  } else {
+    state.combo = Math.max(1, state.combo - dt * tuning.comboDecay);
+  }
+
+  const terrainRush = state.position.y < 80 && state.speedKt > 180;
+  state.thrill = MathUtils.lerp(state.thrill, terrainRush ? 1 : 0, dt * 4.8);
+  if (terrainRush) {
+    const rushScore = dt * state.speedKt * tuning.lowAltitudeBonus * state.combo;
+    addScore(rushScore);
+    state.combo = Math.min(10.5, state.combo + dt * 0.16);
+    if (state.lowAltitudeCooldown === 0 && state.position.y < 48) {
+      const lowBonus = (140 + state.speedKt * 0.45) * state.combo;
+      addScore(lowBonus);
+      state.nearMissCount += 1;
+      state.lowAltitudeCooldown = modeId === "canyon-rush" ? 0.85 : 1.35;
+      emitEvent("low-altitude", `Low pass +${Math.round(lowBonus)}`, 0.6);
+    }
+  }
+
   const headingDeg = headingFromQuaternion(state.quaternion);
   scratchEuler.setFromQuaternion(state.quaternion, "YXZ");
   const pitchDeg = MathUtils.radToDeg(scratchEuler.x);
@@ -285,7 +423,13 @@ export function simulateFlight(
     state.message = "Instructor: stable attitude. Small corrections are doing the work.";
   }
 
+  state.boostActive = boostActive;
   input.throttleDelta = 0;
+  const activeEvent = state.eventTimer > 0 ? state.event : "none";
+  const medal = medalForScore(modeId, state.score, state.elapsed);
+  const routeProgress = route.waypoints.length
+    ? (state.checkpointIndex % route.waypoints.length) / route.waypoints.length
+    : 0;
 
   return {
     speedKt: state.speedKt,
@@ -308,12 +452,24 @@ export function simulateFlight(
     stress,
     score: state.score,
     combo: state.combo,
+    streak: state.streak,
     checkpointIndex: state.checkpointIndex,
     checkpointDistance: state.checkpointDistance,
     elapsed: state.elapsed,
     lessonGrade: state.lessonGrade,
     densityAltitudeFt,
     crosswindKt,
+    event: activeEvent,
+    eventLabel: activeEvent === "none" ? "" : state.eventLabel,
+    eventIntensity: activeEvent === "none" ? 0 : state.eventIntensity,
+    boostActive,
+    boostReady: state.boost > 0.96,
+    thrill: state.thrill,
+    nearMissCount: state.nearMissCount,
+    routeProgress,
+    runComplete: state.runComplete,
+    medal,
+    grade: gradeForMedal(medal),
     message: state.message,
   };
 }
@@ -340,12 +496,24 @@ export function defaultTelemetry(): FlightTelemetry {
     stress: 0,
     score: 0,
     combo: 1,
+    streak: 0,
     checkpointIndex: 0,
     checkpointDistance: 0,
     elapsed: 0,
     lessonGrade: 100,
     densityAltitudeFt: 0,
     crosswindKt: 0,
+    event: "none",
+    eventLabel: "",
+    eventIntensity: 0,
+    boostActive: false,
+    boostReady: false,
+    thrill: 0,
+    nearMissCount: 0,
+    routeProgress: 0,
+    runComplete: false,
+    medal: "none",
+    grade: "Warmup",
     message: "Loading flight systems.",
   };
 }
@@ -356,10 +524,120 @@ function headingFromQuaternion(quaternion: Quaternion) {
   return (MathUtils.radToDeg(radians) + 360) % 360;
 }
 
-function checkpointMessage(modeId: string, index: number) {
-  if (modeId === "sky-delivery") return `Cargo route checkpoint ${index}. Smooth handling bonus armed.`;
-  if (modeId === "sky-academy") return `Lesson gate ${index}. Cross-check speed, altitude, and attitude.`;
-  if (modeId === "canyon-rush") return `Rush gate ${index}. Near-terrain combo climbing.`;
-  if (modeId === "time-trial") return `Gate ${index}. Carry momentum into the next turn.`;
-  return `Waypoint ${index}. Route updated.`;
+function weightedGateDistance(position: Vector3, waypoint: Vector3) {
+  const dx = position.x - waypoint.x;
+  const dy = (position.y - waypoint.y) * 0.42;
+  const dz = position.z - waypoint.z;
+  return Math.sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+function checkpointMessage(modeId: string, index: number, score: number) {
+  if (modeId === "sky-delivery") return `Cargo gate ${index} delivered +${score}. Keep the cabin smooth.`;
+  if (modeId === "sky-academy") return `Lesson gate ${index} +${score}. Cross-check speed, altitude, attitude.`;
+  if (modeId === "canyon-rush") return `Rush gate ${index} +${score}. Low line bonus is live.`;
+  if (modeId === "time-trial") return `Gate ${index} +${score}. Boost toward the next ring.`;
+  if (modeId === "pilot-sandbox") return `Practice waypoint ${index} +${score}. Try the same line in another aircraft.`;
+  return `Waypoint ${index} +${score}. Route updated.`;
+}
+
+function modeTuningFor(modeId: string): ModeTuning {
+  if (modeId === "time-trial") {
+    return {
+      gateRadius: 118,
+      checkpointScore: 360,
+      comboGain: 0.52,
+      comboDecay: 0.06,
+      completionBonus: 2200,
+      speedBonus: 2.2,
+      lowAltitudeBonus: 0.2,
+      timePressure: 7.2,
+    };
+  }
+
+  if (modeId === "canyon-rush") {
+    return {
+      gateRadius: 92,
+      checkpointScore: 420,
+      comboGain: 0.6,
+      comboDecay: 0.04,
+      completionBonus: 2600,
+      speedBonus: 2.8,
+      lowAltitudeBonus: 0.78,
+      timePressure: 5.4,
+    };
+  }
+
+  if (modeId === "sky-delivery") {
+    return {
+      gateRadius: 128,
+      checkpointScore: 300,
+      comboGain: 0.34,
+      comboDecay: 0.08,
+      completionBonus: 2100,
+      speedBonus: 0.9,
+      lowAltitudeBonus: 0.18,
+      timePressure: 3.2,
+    };
+  }
+
+  if (modeId === "sky-academy") {
+    return {
+      gateRadius: 132,
+      checkpointScore: 280,
+      comboGain: 0.28,
+      comboDecay: 0.035,
+      completionBonus: 1800,
+      speedBonus: 0.8,
+      lowAltitudeBonus: 0.12,
+      timePressure: 2.6,
+    };
+  }
+
+  if (modeId === "pilot-sandbox") {
+    return {
+      gateRadius: 146,
+      checkpointScore: 240,
+      comboGain: 0.24,
+      comboDecay: 0.025,
+      completionBonus: 1600,
+      speedBonus: 0.7,
+      lowAltitudeBonus: 0.18,
+      timePressure: 1.8,
+    };
+  }
+
+  return {
+    gateRadius: 136,
+    checkpointScore: 260,
+    comboGain: 0.3,
+    comboDecay: 0.03,
+    completionBonus: 1800,
+    speedBonus: 1,
+    lowAltitudeBonus: 0.32,
+    timePressure: 2.4,
+  };
+}
+
+function medalForScore(modeId: string, score: number, elapsed: number): FlightMedal {
+  const timeAdjustment = Math.max(0, 1 - elapsed / 420);
+  const adjustedScore = score * (1 + timeAdjustment * (modeId === "time-trial" ? 0.18 : 0.08));
+  const ace =
+    modeId === "canyon-rush" ? 15000 : modeId === "time-trial" ? 13800 : modeId === "sky-delivery" ? 11200 : 10400;
+  const gold = ace * 0.72;
+  const silver = ace * 0.48;
+  const bronze = ace * 0.28;
+
+  if (adjustedScore >= ace) return "ace";
+  if (adjustedScore >= gold) return "gold";
+  if (adjustedScore >= silver) return "silver";
+  if (adjustedScore >= bronze) return "bronze";
+  return "none";
+}
+
+function gradeForMedal(medal: FlightMedal) {
+  if (medal === "ace") return "Ace";
+  if (medal === "gold") return "Gold";
+  if (medal === "silver") return "Silver";
+  if (medal === "bronze") return "Bronze";
+  return "Warmup";
 }

@@ -1,13 +1,23 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { Activity, Compass, Gauge, Map, Music, Pause, Radar, Timer } from "lucide-react";
-import { getAircraft, getMap, getMode } from "@/lib/flight/catalog";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Activity, ArrowRight, BadgeCheck, Compass, Gauge, Map, Music, Pause, Radar, RotateCcw, Timer, Trophy, Zap } from "lucide-react";
+import { gameModes, getAircraft, getMap, getMode, maps, pilotGoals } from "@/lib/flight/catalog";
 import { headingToCompass } from "@/lib/flight/navigation";
 import { useGameStore } from "@/lib/flight/store";
+import { GameModeId, MapId } from "@/lib/flight/types";
+
+type ScorePop = {
+  id: number;
+  text: string;
+  kind: string;
+};
 
 export function Hud() {
   const telemetry = useGameStore((state) => state.telemetry);
+  const modeId = useGameStore((state) => state.modeId);
+  const mapId = useGameStore((state) => state.mapId);
   const aircraft = useGameStore((state) => getAircraft(state.aircraftId));
   const map = useGameStore((state) => getMap(state.mapId));
   const mode = useGameStore((state) => getMode(state.modeId));
@@ -18,7 +28,58 @@ export function Hud() {
   const setMusic = useGameStore((state) => state.setMusic);
   const setFpsLimiter = useGameStore((state) => state.setFpsLimiter);
   const setScreenshotMode = useGameStore((state) => state.setScreenshotMode);
+  const setMode = useGameStore((state) => state.setMode);
+  const setMap = useGameStore((state) => state.setMap);
+  const restartFlight = useGameStore((state) => state.restartFlight);
+  const clearRunSummary = useGameStore((state) => state.clearRunSummary);
+  const runSummary = useGameStore((state) => state.runSummary);
+  const unlockedGoals = useGameStore((state) => state.unlockedGoals);
   const realism = useGameStore((state) => state.realism);
+  const [scorePops, setScorePops] = useState<ScorePop[]>([]);
+  const previousScore = useRef(telemetry.score);
+  const previousEvent = useRef(telemetry.eventLabel);
+  const progressPercent = Math.round(telemetry.routeProgress * 100);
+  const unlockedCount = useMemo(
+    () => pilotGoals.filter((goal) => unlockedGoals[goal.id]).length,
+    [unlockedGoals],
+  );
+
+  const pushScorePop = useCallback((text: string, kind: string) => {
+    const id = Date.now() + Math.random();
+    setScorePops((items) => [...items.slice(-3), { id, text, kind }]);
+    window.setTimeout(() => {
+      setScorePops((items) => items.filter((item) => item.id !== id));
+    }, 1100);
+  }, []);
+
+  useEffect(() => {
+    const delta = telemetry.score - previousScore.current;
+    if (delta > 0) pushScorePop(`+${delta.toLocaleString()}`, "score");
+    previousScore.current = telemetry.score;
+  }, [pushScorePop, telemetry.score]);
+
+  useEffect(() => {
+    if (telemetry.eventLabel && telemetry.eventLabel !== previousEvent.current) {
+      pushScorePop(telemetry.eventLabel, telemetry.event);
+      previousEvent.current = telemetry.eventLabel;
+    }
+  }, [pushScorePop, telemetry.event, telemetry.eventLabel]);
+
+  const retryRun = () => {
+    clearRunSummary();
+    restartFlight();
+  };
+
+  const nextChallenge = () => {
+    const modeIndex = gameModes.findIndex((item) => item.id === modeId);
+    const mapIndex = maps.findIndex((item) => item.id === mapId);
+    const nextMode = gameModes[(modeIndex + 1) % gameModes.length];
+    const nextMap = maps[(mapIndex + (nextMode.id === "free-flight" ? 1 : 0)) % maps.length];
+    clearRunSummary();
+    setMode(nextMode.id as GameModeId);
+    setMap(nextMap.id as MapId);
+    restartFlight();
+  };
 
   return (
     <section
@@ -45,6 +106,44 @@ export function Hud() {
         <small>{telemetry.message}</small>
       </div>
 
+      <div className="mission-card" style={{ "--accent": aircraft.accent } as CSSProperties}>
+        <div>
+          <span>{mode.shortName} objective</span>
+          <strong>{mode.objective}</strong>
+          <small>{mode.scoringHint}</small>
+        </div>
+        <div className="mission-score">
+          <b>{telemetry.score.toLocaleString()}</b>
+          <small>x{telemetry.combo.toFixed(1)} / streak {telemetry.streak}</small>
+          <i>
+            <em style={{ width: `${progressPercent}%` }} />
+          </i>
+        </div>
+      </div>
+
+      <div className="juice-row">
+        <span className={telemetry.boostActive ? "juice-chip hot" : telemetry.boostReady ? "juice-chip ready" : "juice-chip"}>
+          <Zap size={13} />
+          {telemetry.boostActive ? "Boosting" : telemetry.boostReady ? "Boost ready" : "Boost charging"}
+        </span>
+        <span className={telemetry.thrill > 0.4 ? "juice-chip hot" : "juice-chip"}>
+          <Activity size={13} />
+          {telemetry.thrill > 0.4 ? "Low pass thrill" : `${telemetry.nearMissCount} skims`}
+        </span>
+        <span className="juice-chip">
+          <Trophy size={13} />
+          {telemetry.grade}
+        </span>
+      </div>
+
+      <div className="score-pop-stack" aria-live="polite">
+        {scorePops.map((pop) => (
+          <span key={pop.id} className={`score-pop ${pop.kind}`}>
+            {pop.text}
+          </span>
+        ))}
+      </div>
+
       <div className="hud-bottom">
         <div className="bars">
           <Bar label="THR" value={telemetry.throttle} color={aircraft.accent} />
@@ -55,7 +154,7 @@ export function Hud() {
         <div className="score-box">
           <span>SCORE</span>
           <strong>{telemetry.score.toLocaleString()}</strong>
-          <small>x{telemetry.combo.toFixed(1)} / gate {telemetry.checkpointIndex + 1}</small>
+          <small>x{telemetry.combo.toFixed(1)} / {telemetry.grade} / gate {telemetry.checkpointIndex + 1}</small>
         </div>
         <div className="radar-box">
           <Radar size={15} />
@@ -89,6 +188,39 @@ export function Hud() {
           <span>{telemetry.gearDown ? "Gear down" : "Gear up"}</span>
           {realism.densityAltitude && <span>DA {telemetry.densityAltitudeFt.toFixed(0)} ft</span>}
           {telemetry.stall && <b>STALL</b>}
+        </div>
+      )}
+
+      {runSummary && (
+        <div className="run-summary-card" role="dialog" aria-label="Run complete">
+          <div className="run-summary-heading">
+            <BadgeCheck size={20} />
+            <div>
+              <strong>{runSummary.grade} route clear</strong>
+              <small>{runSummary.modeName} / {runSummary.mapName}</small>
+            </div>
+          </div>
+          <div className="run-summary-score">
+            <span>{runSummary.score.toLocaleString()}</span>
+            <small>{runSummary.isBest ? "New best" : `Best ${runSummary.bestScore.toLocaleString()}`} / goals {unlockedCount}/{pilotGoals.length}</small>
+          </div>
+          <p>{runSummary.feedback}</p>
+          <div className="run-summary-metrics">
+            <span>x{runSummary.combo.toFixed(1)} combo</span>
+            <span>{runSummary.streak} streak</span>
+            <span>{runSummary.nearMisses} skims</span>
+            <span>{formatTime(runSummary.elapsed)}</span>
+          </div>
+          <div className="run-summary-actions">
+            <button type="button" onClick={retryRun}>
+              <RotateCcw size={15} />
+              Retry Run
+            </button>
+            <button type="button" onClick={nextChallenge}>
+              <ArrowRight size={15} />
+              Next Challenge
+            </button>
+          </div>
         </div>
       )}
     </section>

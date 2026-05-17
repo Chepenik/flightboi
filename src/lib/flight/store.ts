@@ -10,6 +10,7 @@ import {
   ControlSettings,
   EasterEggMode,
   FlightTelemetry,
+  FlightRunSummary,
   GameModeId,
   GridRunHudState,
   HudSettings,
@@ -44,6 +45,9 @@ type GameStore = {
   headingBug: number;
   altitudeHoldFt: number;
   screenshotMode: boolean;
+  bestRuns: Partial<Record<GameModeId, FlightRunSummary>>;
+  unlockedGoals: Record<string, boolean>;
+  runSummary: FlightRunSummary | null;
   revision: number;
   setAircraft: (aircraftId: AircraftId) => void;
   setMap: (mapId: MapId) => void;
@@ -67,8 +71,15 @@ type GameStore = {
   setHeadingBug: (headingBug: number) => void;
   setAltitudeHoldFt: (altitudeHoldFt: number) => void;
   setScreenshotMode: (screenshotMode: boolean) => void;
+  completeRun: (summary: FlightRunSummaryInput) => void;
+  clearRunSummary: () => void;
   restartFlight: () => void;
 };
+
+type FlightRunSummaryInput = Omit<
+  FlightRunSummary,
+  "id" | "bestScore" | "isBest" | "completedAt"
+>;
 
 const initialPayload: PayloadState = {
   passengers: 1,
@@ -102,6 +113,13 @@ const initialGridRunHud: GridRunHudState = {
   message: "Arrow keys steer. Type tron to enter the grid.",
 };
 
+const initialUnlockedGoals = {
+  "first-route": false,
+  "combo-five": false,
+  "canyon-bronze": false,
+  "ace-run": false,
+};
+
 export const useGameStore = create<GameStore>()(
   persist(
     (set) => ({
@@ -126,10 +144,15 @@ export const useGameStore = create<GameStore>()(
       headingBug: 90,
       altitudeHoldFt: 1500,
       screenshotMode: false,
+      bestRuns: {},
+      unlockedGoals: initialUnlockedGoals,
+      runSummary: null,
       revision: 0,
-      setAircraft: (aircraftId) => set((state) => ({ aircraftId, revision: state.revision + 1 })),
-      setMap: (mapId) => set((state) => ({ mapId, revision: state.revision + 1 })),
-      setMode: (modeId) => set({ modeId }),
+      setAircraft: (aircraftId) =>
+        set((state) => ({ aircraftId, revision: state.revision + 1, runSummary: null })),
+      setMap: (mapId) =>
+        set((state) => ({ mapId, revision: state.revision + 1, runSummary: null })),
+      setMode: (modeId) => set({ modeId, runSummary: null }),
       setCameraMode: (cameraMode) => set({ cameraMode }),
       setRealismPreset: (preset) =>
         set({ realismPreset: preset, realism: realismFromPreset(preset) }),
@@ -173,7 +196,42 @@ export const useGameStore = create<GameStore>()(
       setHeadingBug: (headingBug) => set({ headingBug }),
       setAltitudeHoldFt: (altitudeHoldFt) => set({ altitudeHoldFt }),
       setScreenshotMode: (screenshotMode) => set({ screenshotMode }),
-      restartFlight: () => set((state) => ({ revision: state.revision + 1 })),
+      completeRun: (summary) =>
+        set((state) => {
+          const previousBest = state.bestRuns[summary.modeId];
+          const isBest = !previousBest || summary.score > previousBest.score;
+          const completedAt = new Date().toISOString();
+          const bestScore = isBest ? summary.score : (previousBest?.score ?? summary.score);
+          const runSummary: FlightRunSummary = {
+            ...summary,
+            id: `${summary.modeId}-${summary.mapId}-${Date.now()}`,
+            bestScore,
+            isBest,
+            completedAt,
+          };
+          const unlockedGoals = {
+            ...state.unlockedGoals,
+            "first-route": true,
+            "combo-five": state.unlockedGoals["combo-five"] || summary.streak >= 5,
+            "canyon-bronze":
+              state.unlockedGoals["canyon-bronze"] ||
+              (summary.modeId === "canyon-rush" && medalRank(summary.medal) >= medalRank("bronze")),
+            "ace-run": state.unlockedGoals["ace-run"] || summary.medal === "ace",
+          };
+
+          return {
+            runSummary,
+            bestRuns: isBest
+              ? {
+                  ...state.bestRuns,
+                  [summary.modeId]: runSummary,
+                }
+              : state.bestRuns,
+            unlockedGoals,
+          };
+        }),
+      clearRunSummary: () => set({ runSummary: null }),
+      restartFlight: () => set((state) => ({ revision: state.revision + 1, runSummary: null })),
     }),
     {
       name: "flightboi-save-v1",
@@ -194,21 +252,41 @@ export const useGameStore = create<GameStore>()(
         autopilot: state.autopilot,
         headingBug: state.headingBug,
         altitudeHoldFt: state.altitudeHoldFt,
+        bestRuns: state.bestRuns,
+        unlockedGoals: state.unlockedGoals,
       }),
-      merge: (persistedState, currentState) => ({
-        ...currentState,
-        ...(isPersistedGameState(persistedState) ? persistedState : {}),
-        screenshotMode: false,
-        easterEggMode: "none",
-        gridRunHud: currentState.gridRunHud,
-        gridRunRevision: currentState.gridRunRevision,
-        telemetry: currentState.telemetry,
-        revision: currentState.revision,
-      }),
+      merge: (persistedState, currentState) => {
+        const persisted = isPersistedGameState(persistedState) ? persistedState : {};
+
+        return {
+          ...currentState,
+          ...persisted,
+          bestRuns: persisted.bestRuns ?? currentState.bestRuns,
+          unlockedGoals: {
+            ...currentState.unlockedGoals,
+            ...(persisted.unlockedGoals ?? {}),
+          },
+          runSummary: null,
+          screenshotMode: false,
+          easterEggMode: "none",
+          gridRunHud: currentState.gridRunHud,
+          gridRunRevision: currentState.gridRunRevision,
+          telemetry: currentState.telemetry,
+          revision: currentState.revision,
+        };
+      },
     },
   ),
 );
 
 function isPersistedGameState(value: unknown): value is Partial<GameStore> {
   return typeof value === "object" && value !== null;
+}
+
+function medalRank(medal: FlightRunSummary["medal"]) {
+  if (medal === "ace") return 4;
+  if (medal === "gold") return 3;
+  if (medal === "silver") return 2;
+  if (medal === "bronze") return 1;
+  return 0;
 }

@@ -92,20 +92,9 @@ export function CheckpointRings({
   modeId: GameModeId;
 }) {
   const active = activeIndex % route.waypoints.length;
-
-  if (modeId === "free-flight" || modeId === "pilot-sandbox") {
-    return (
-      <group>
-        <Line
-          points={route.waypoints.map((point) => [point.x, point.y, point.z])}
-          color={accent}
-          transparent
-          opacity={0.18}
-          lineWidth={1}
-        />
-      </group>
-    );
-  }
+  const relaxed = modeId === "free-flight" || modeId === "pilot-sandbox";
+  const gateRadius =
+    modeId === "canyon-rush" ? 58 : modeId === "sky-delivery" ? 68 : relaxed ? 74 : 66;
 
   return (
     <group>
@@ -113,30 +102,74 @@ export function CheckpointRings({
         points={route.waypoints.map((point) => [point.x, point.y, point.z])}
         color={accent}
         transparent
-        opacity={0.32}
-        lineWidth={1.2}
+        opacity={relaxed ? 0.2 : 0.36}
+        lineWidth={relaxed ? 1 : 1.45}
       />
       {route.waypoints.map((point, index) => {
         const isActive = index === active;
         return (
-          <Billboard key={`${point.x}-${point.z}`} position={point}>
-            <mesh scale={isActive ? 1.22 : 0.84}>
-              <torusGeometry args={[42, isActive ? 2.7 : 1.5, 10, 64]} />
-              <meshBasicMaterial
-                color={isActive ? accent : "#dbe8ff"}
-                transparent
-                opacity={isActive ? 0.92 : 0.24}
-                toneMapped={false}
-              />
-            </mesh>
-            <mesh scale={isActive ? 1.02 : 0.68}>
-              <torusGeometry args={[58, 0.7, 8, 64]} />
-              <meshBasicMaterial color={accent} transparent opacity={isActive ? 0.38 : 0.12} toneMapped={false} />
-            </mesh>
-          </Billboard>
+          <GateRing
+            key={`${point.x}-${point.z}`}
+            position={[point.x, point.y, point.z]}
+            active={isActive}
+            accent={accent}
+            relaxed={relaxed}
+            radius={gateRadius}
+          />
         );
       })}
     </group>
+  );
+}
+
+function GateRing({
+  position,
+  active,
+  accent,
+  relaxed,
+  radius,
+}: {
+  position: [number, number, number];
+  active: boolean;
+  accent: string;
+  relaxed: boolean;
+  radius: number;
+}) {
+  const ringRef = useRef<Group>(null);
+
+  useFrame(({ clock }) => {
+    if (!ringRef.current) return;
+    const pulse = active ? 1 + Math.sin(clock.elapsedTime * 5.6) * 0.08 : 1;
+    ringRef.current.scale.setScalar(pulse);
+  });
+
+  return (
+    <Billboard position={position}>
+      <group ref={ringRef}>
+        <mesh scale={active ? 1.22 : relaxed ? 0.72 : 0.84}>
+          <torusGeometry args={[radius, active ? 3.2 : 1.35, 10, 72]} />
+          <meshBasicMaterial
+            color={active ? accent : "#dbe8ff"}
+            transparent
+            opacity={active ? 0.94 : relaxed ? 0.18 : 0.25}
+            toneMapped={false}
+          />
+        </mesh>
+        <mesh scale={active ? 1.02 : relaxed ? 0.62 : 0.68}>
+          <torusGeometry args={[radius + 17, 0.7, 8, 72]} />
+          <meshBasicMaterial color={accent} transparent opacity={active ? 0.42 : 0.12} toneMapped={false} />
+        </mesh>
+        {active && (
+          <>
+            <mesh scale={0.62}>
+              <torusGeometry args={[radius + 30, 0.38, 6, 72]} />
+              <meshBasicMaterial color="#ffffff" transparent opacity={0.2} toneMapped={false} />
+            </mesh>
+            <Sparkles count={20} scale={[radius * 2.1, radius * 2.1, 10]} size={2.4} speed={0.72} color={accent} opacity={0.55} />
+          </>
+        )}
+      </group>
+    </Billboard>
   );
 }
 
@@ -154,25 +187,114 @@ export function FlightParticles({
   const particleCount = map.id === "neon-pacific" ? 90 : map.id === "alpine-dominion" ? 130 : 70;
   const visible = cameraMode !== "cockpit";
   const groupRef = useRef<Group>(null);
+  const boostRef = useRef<Group>(null);
   const particleColor =
     map.id === "crimson-dunes" ? "#ffb15d" : map.id === "alpine-dominion" ? "#eff8ff" : aircraft.accent;
 
   useFrame(() => {
-    groupRef.current?.position.copy(flight.current.position);
+    if (!groupRef.current) return;
+    groupRef.current.position.copy(flight.current.position);
+    groupRef.current.quaternion.copy(flight.current.quaternion);
+
+    if (boostRef.current) {
+      const boostScale = flight.current.boostActive ? 1.35 + flight.current.shake * 0.9 : 0.25;
+      boostRef.current.visible = flight.current.boostActive || flight.current.event === "boost";
+      boostRef.current.scale.setScalar(MathUtils.lerp(boostRef.current.scale.x, boostScale, 0.24));
+    }
   });
 
   return (
     <group ref={groupRef} position={flight.current.position}>
       {visible && (
-        <Sparkles
-          count={particleCount}
-          scale={[240, 110, 300]}
-          size={map.id === "crimson-dunes" ? 5 : 2.2}
-          speed={map.id === "neon-pacific" ? 0.7 : 0.36}
-          color={particleColor}
-          opacity={map.id === "neon-pacific" ? 0.32 : 0.22}
-        />
+        <>
+          <Sparkles
+            count={particleCount}
+            scale={[240, 110, 300]}
+            size={map.id === "crimson-dunes" ? 5 : 2.2}
+            speed={map.id === "neon-pacific" ? 0.7 : 0.36}
+            color={particleColor}
+            opacity={map.id === "neon-pacific" ? 0.32 : 0.22}
+          />
+          <SpeedStreaks accent={aircraft.accent} />
+          <ContrailRibbons accent={aircraft.accent} engineSpan={aircraft.id === "atlas-cruiser" ? 13.5 : 2.2} />
+          <group ref={boostRef} position={[0, -0.25, 12]}>
+            <mesh rotation={[Math.PI / 2, 0, 0]} scale={[2.2, 2.2, 7.8]}>
+              <coneGeometry args={[1, 1, 18]} />
+              <meshBasicMaterial color={aircraft.accent} transparent opacity={0.42} toneMapped={false} />
+            </mesh>
+            <pointLight color={aircraft.accent} intensity={2.1} distance={70} />
+          </group>
+        </>
       )}
+    </group>
+  );
+}
+
+function SpeedStreaks({ accent }: { accent: string }) {
+  const streaks = useMemo(
+    () =>
+      Array.from({ length: 20 }).map((_, index) => {
+        const ring = index % 5;
+        const side = index % 2 === 0 ? -1 : 1;
+        return {
+          x: side * (24 + ring * 8),
+          y: -18 + ((index * 13) % 42),
+          z: -82 - index * 14,
+          length: 90 + (index % 4) * 28,
+          opacity: 0.1 + (index % 3) * 0.045,
+        };
+      }),
+    [],
+  );
+
+  return (
+    <group>
+      {streaks.map((streak, index) => (
+        <Line
+          key={index}
+          points={[
+            [streak.x, streak.y, streak.z],
+            [streak.x * 0.72, streak.y * 0.9, streak.z + streak.length],
+          ]}
+          color={index % 3 === 0 ? "#ffffff" : accent}
+          transparent
+          opacity={streak.opacity}
+          lineWidth={1.4}
+        />
+      ))}
+    </group>
+  );
+}
+
+function ContrailRibbons({ accent, engineSpan }: { accent: string; engineSpan: number }) {
+  const points = useMemo<[number, number, number][][]>(
+    () => [
+      [
+        [-engineSpan, 0.05, 8],
+        [-engineSpan * 1.18, 0.28, 50],
+        [-engineSpan * 1.4, 0.1, 116],
+      ],
+      [
+        [engineSpan, 0.05, 8],
+        [engineSpan * 1.18, 0.28, 50],
+        [engineSpan * 1.4, 0.1, 116],
+      ],
+    ],
+    [engineSpan],
+  );
+
+  return (
+    <group>
+      {points.map((trail, index) => (
+        <Line
+          key={index}
+          points={trail}
+          color={index === 0 ? "#ffffff" : accent}
+          transparent
+          opacity={0.22}
+          lineWidth={2.4}
+        />
+      ))}
     </group>
   );
 }

@@ -1,9 +1,9 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import { Activity, Gauge, Keyboard, Map as MapIcon, MousePointer2, Plane, Play, Radar, Zap } from "lucide-react";
+import { Activity, Gauge, Keyboard, Map as MapIcon, MousePointer2, Plane, Play, Radar, Trophy, Zap } from "lucide-react";
 import { useShallow } from "zustand/react/shallow";
-import { aircraft, gameModes, getAircraft, getMap, getMode, maps } from "@/lib/flight/catalog";
+import { aircraft, gameModes, getAircraft, getMap, getMode, maps, pilotGoals } from "@/lib/flight/catalog";
 import { useGameStore } from "@/lib/flight/store";
 import {
   AircraftId,
@@ -36,6 +36,8 @@ export function LaunchScreen({ onLaunch }: LaunchScreenProps) {
     modeId,
     realismPreset,
     controls,
+    bestRuns,
+    unlockedGoals,
     setAircraft,
     setMap,
     setMode,
@@ -51,6 +53,8 @@ export function LaunchScreen({ onLaunch }: LaunchScreenProps) {
       modeId: state.modeId,
       realismPreset: state.realismPreset,
       controls: state.controls,
+      bestRuns: state.bestRuns,
+      unlockedGoals: state.unlockedGoals,
       setAircraft: state.setAircraft,
       setMap: state.setMap,
       setMode: state.setMode,
@@ -65,6 +69,7 @@ export function LaunchScreen({ onLaunch }: LaunchScreenProps) {
   const activeAircraft = getAircraft(aircraftId);
   const activeMap = getMap(mapId);
   const activeMode = getMode(modeId);
+  const activeBest = bestRuns[modeId];
 
   const launchSelected = () => {
     restartFlight();
@@ -74,7 +79,7 @@ export function LaunchScreen({ onLaunch }: LaunchScreenProps) {
   const quickStart = () => {
     setAircraft("falcon-x");
     setMap("alpine-dominion");
-    setMode("free-flight");
+    setMode("time-trial");
     setCameraMode("chase");
     setRealismPreset("game");
     setControlSettings({
@@ -140,15 +145,26 @@ export function LaunchScreen({ onLaunch }: LaunchScreenProps) {
             <PanelHeading icon={<Activity size={17} />} title="Ready Slot" detail={activeMode.name} />
             <strong>{activeAircraft.name}</strong>
             <p>{activeMap.tagline}</p>
+            <div className="launch-objective">
+              <Trophy size={16} />
+              <span>{activeMode.objective}</span>
+            </div>
             <div className="launch-metrics">
               <Metric label="Biome" value={activeMap.name} />
               <Metric label="Mode" value={activeMode.shortName} />
               <Metric label="Wind" value={`${activeMap.wind.speedKt}G${activeMap.wind.gustKt} kt`} />
-              <Metric label="Controls" value={controls.mode} />
+              <Metric label="Best" value={activeBest ? `${activeBest.score.toLocaleString()} ${activeBest.grade}` : "No clear"} />
+            </div>
+            <div className="launch-goals" aria-label="Pilot goals">
+              {pilotGoals.map((goal) => (
+                <span key={goal.id} className={unlockedGoals[goal.id] ? "unlocked" : ""} title={goal.description}>
+                  {goal.label}
+                </span>
+              ))}
             </div>
             <div className="launch-desktop-note">
               <Keyboard size={15} aria-hidden="true" />
-              <span>Desktop controls: keyboard, mouse, trackpad, or gamepad.</span>
+              <span>{activeMode.nextStep}</span>
             </div>
           </section>
 
@@ -197,6 +213,7 @@ export function LaunchScreen({ onLaunch }: LaunchScreenProps) {
                 >
                   <span>{mode.name}</span>
                   <small>{mode.description}</small>
+                  <em>{mode.scoringHint}</em>
                 </button>
               ))}
             </div>

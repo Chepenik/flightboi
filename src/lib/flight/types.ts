@@ -37,6 +37,20 @@ export type HudLayout = "clean" | "full" | "minimal";
 
 export type EasterEggMode = "none" | "grid-run";
 
+export type FlightEventKind =
+  | "none"
+  | "boost"
+  | "checkpoint"
+  | "near-miss"
+  | "low-altitude"
+  | "stall"
+  | "recovery"
+  | "landing"
+  | "impact"
+  | "run-complete";
+
+export type FlightMedal = "none" | "bronze" | "silver" | "gold" | "ace";
+
 export type WeatherKind =
   | "clear"
   | "snow"
@@ -122,6 +136,9 @@ export type GameModeProfile = {
   shortName: string;
   description: string;
   learningFocus: string;
+  objective: string;
+  scoringHint: string;
+  nextStep: string;
 };
 
 export type AcademyLesson = {
@@ -200,12 +217,24 @@ export type FlightTelemetry = {
   stress: number;
   score: number;
   combo: number;
+  streak: number;
   checkpointIndex: number;
   checkpointDistance: number;
   elapsed: number;
   lessonGrade: number;
   densityAltitudeFt: number;
   crosswindKt: number;
+  event: FlightEventKind;
+  eventLabel: string;
+  eventIntensity: number;
+  boostActive: boolean;
+  boostReady: boolean;
+  thrill: number;
+  nearMissCount: number;
+  routeProgress: number;
+  runComplete: boolean;
+  medal: FlightMedal;
+  grade: string;
   message: string;
 };
 
@@ -223,4 +252,26 @@ export type InputFrame = {
   flapsDown: boolean;
   gearToggle: boolean;
   reset: boolean;
+};
+
+export type FlightRunSummary = {
+  id: string;
+  modeId: GameModeId;
+  modeName: string;
+  aircraftId: AircraftId;
+  aircraftName: string;
+  mapId: MapId;
+  mapName: string;
+  score: number;
+  bestScore: number;
+  isBest: boolean;
+  combo: number;
+  streak: number;
+  nearMisses: number;
+  checkpoints: number;
+  elapsed: number;
+  medal: FlightMedal;
+  grade: string;
+  feedback: string;
+  completedAt: string;
 };

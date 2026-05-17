@@ -215,6 +215,9 @@ export const gameModes: GameModeProfile[] = [
     shortName: "Free",
     description: "Relaxed exploration with dynamic weather, cruise camera, and photo-ready scenery.",
     learningFocus: "Scan attitude, speed, terrain, and wind without pressure.",
+    objective: "Thread the scenic loop, skim low when it feels safe, and land cleanly when you are ready.",
+    scoringHint: "Waypoints, low-altitude thrills, smooth landings.",
+    nextStep: "Follow the glowing route, then try a lower pass for thrill bonuses.",
   },
   {
     id: "time-trial",
@@ -222,6 +225,9 @@ export const gameModes: GameModeProfile[] = [
     shortName: "Trial",
     description: "Hit clean gates, manage boost, and chase repeatable route time.",
     learningFocus: "Smooth bank angles, coordinated turns, and altitude discipline.",
+    objective: "Clear one full gate loop as fast as possible without bleeding your combo.",
+    scoringHint: "Fast gates, streaks, boost timing, route clear bonus.",
+    nextStep: "Boost out of each gate and keep the next ring centered.",
   },
   {
     id: "canyon-rush",
@@ -229,6 +235,9 @@ export const gameModes: GameModeProfile[] = [
     shortName: "Rush",
     description: "Increasing speed, near-miss bonuses, and route survival through terrain.",
     learningFocus: "Energy management and sight-picture planning under load.",
+    objective: "Stay low, stay quick, and chain tight canyon gates without clipping the floor.",
+    scoringHint: "Near misses, low-altitude streaks, high-speed gates.",
+    nextStep: "Hold a fast line below 250 ft and use air brake only to save the run.",
   },
   {
     id: "sky-delivery",
@@ -236,6 +245,9 @@ export const gameModes: GameModeProfile[] = [
     shortName: "Cargo",
     description: "Cargo runs that reward gentle handling, stable approaches, and fuel planning.",
     learningFocus: "Weight, balance, throttle, and descent planning.",
+    objective: "Fly the cargo loop smoothly; passengers and cargo hate high-G heroics.",
+    scoringHint: "Smooth gates, low G, stable vertical speed, clean touchdown.",
+    nextStep: "Keep bank angles shallow and plan every descent before the gate.",
   },
   {
     id: "sky-academy",
@@ -243,6 +255,9 @@ export const gameModes: GameModeProfile[] = [
     shortName: "Academy",
     description: "Structured aviation lessons with visual coaching and flight grading.",
     learningFocus: "Airspeed, AoA, trim, flaps, wind correction, and landing setup.",
+    objective: "Complete the lesson gates while preserving grade and recovering cleanly from mistakes.",
+    scoringHint: "Lesson gates, stable attitude, stall recovery, instructor grade.",
+    nextStep: "Fly small corrections and watch the lesson checklist.",
   },
   {
     id: "pilot-sandbox",
@@ -250,8 +265,34 @@ export const gameModes: GameModeProfile[] = [
     shortName: "Sandbox",
     description: "Full familiarization cockpit, W&B, navigation, and realism toggles for free practice.",
     learningFocus: "Pilot workflow, cockpit interpretation, and realistic cause/effect.",
+    objective: "Practice systems, routes, approaches, and unusual attitudes with no timer pressure.",
+    scoringHint: "Stable practice, route work, recovery quality, clean approaches.",
+    nextStep: "Change aircraft or realism, then compare how the same route feels.",
   },
 ];
+
+export const pilotGoals = [
+  {
+    id: "first-route",
+    label: "Route Clear",
+    description: "Finish any full gate loop.",
+  },
+  {
+    id: "combo-five",
+    label: "Five Streak",
+    description: "Finish a run with a 5+ gate streak.",
+  },
+  {
+    id: "canyon-bronze",
+    label: "Canyon Badge",
+    description: "Earn bronze or better in Canyon Rush.",
+  },
+  {
+    id: "ace-run",
+    label: "Ace Medal",
+    description: "Earn an Ace medal in any mode.",
+  },
+] as const;
 
 export const academyLessons: AcademyLesson[] = [
   {
