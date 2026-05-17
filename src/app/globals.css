@@ -541,15 +541,19 @@ input:focus-visible {
   left: 50%;
   transform: translateX(-50%);
   display: grid;
-  grid-template-columns: minmax(185px, 1fr) auto 42px;
+  grid-template-columns: minmax(170px, 1fr) minmax(0, auto) auto;
   align-items: center;
-  gap: 14px;
-  width: min(930px, calc(100vw - 40px));
+  gap: 10px;
+  width: min(760px, calc(100vw - 40px));
   padding: 10px 12px;
   border: 1px solid var(--panel-line);
-  background: rgba(7, 11, 18, 0.6);
-  backdrop-filter: blur(18px);
+  background: rgba(7, 11, 18, 0.48);
+  backdrop-filter: blur(14px);
   box-shadow: 0 18px 56px rgba(0, 0, 0, 0.24);
+}
+
+.flight-topbar.panels-open {
+  background: rgba(7, 11, 18, 0.68);
 }
 
 .brand-lockup,
@@ -647,6 +651,12 @@ input:focus-visible {
   background: rgba(255, 255, 255, 0.06);
 }
 
+.icon-button.active {
+  border-color: rgba(125, 231, 255, 0.42);
+  background: rgba(125, 231, 255, 0.14);
+  color: #fff;
+}
+
 .topbar-actions {
   display: flex;
   justify-content: flex-end;
@@ -655,14 +665,22 @@ input:focus-visible {
 
 .control-panel {
   top: 86px;
-  width: 318px;
+  width: 302px;
   max-height: calc(100vh - 155px);
   overflow: auto;
   padding: 14px;
   border: 1px solid var(--panel-line);
-  background: var(--panel);
-  backdrop-filter: blur(20px);
+  background: rgba(5, 10, 14, 0.62);
+  opacity: 0.9;
+  backdrop-filter: blur(14px);
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.26);
+  transition: opacity 150ms ease, background 150ms ease;
+}
+
+.control-panel:hover,
+.control-panel:focus-within {
+  background: rgba(5, 10, 14, 0.82);
+  opacity: 1;
 }
 
 .left-panel {
@@ -671,6 +689,43 @@ input:focus-visible {
 
 .right-panel {
   right: 18px;
+}
+
+.hud-restore-button {
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  z-index: 12;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid rgba(125, 231, 255, 0.26);
+  background: rgba(4, 8, 14, 0.42);
+  color: rgba(242, 247, 255, 0.82);
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.hud-restore-button:hover {
+  border-color: rgba(125, 231, 255, 0.48);
+  background: rgba(4, 8, 14, 0.72);
+  color: #fff;
+}
+
+.hud-restore-button span {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.hud-restore-button kbd {
+  padding: 2px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 10px;
 }
 
 .panel-header {
@@ -920,13 +975,13 @@ input:focus-visible {
 }
 
 .hud {
-  left: 50%;
-  top: 116px;
+  left: 18px;
+  bottom: 18px;
   display: grid;
-  width: min(620px, calc(100vw - 760px));
-  min-width: 440px;
-  transform: translateX(-50%);
-  gap: 8px;
+  width: min(390px, calc(100vw - 40px));
+  min-width: 0;
+  transform: none;
+  gap: 6px;
   opacity: var(--hud-opacity, 0.86);
   pointer-events: none;
 }
@@ -942,17 +997,19 @@ input:focus-visible {
 }
 
 .hud-primary {
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .hud-metric {
   min-width: 0;
   flex: 1 1 0;
-  gap: 8px;
-  padding: 7px 9px;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 8px;
   border: 1px solid var(--panel-line);
-  background: rgba(4, 8, 14, 0.56);
-  backdrop-filter: blur(12px);
+  background: rgba(4, 8, 14, 0.48);
+  backdrop-filter: blur(10px);
 }
 
 .hud-metric.alert {
@@ -969,20 +1026,21 @@ input:focus-visible {
 .hud-metric strong {
   margin-left: auto;
   font-family: var(--font-geist-mono), monospace;
-  font-size: 17px;
+  font-size: 16px;
 }
 
 .flight-director {
   position: relative;
   display: grid;
-  min-height: 42px;
+  min-height: 38px;
   overflow: hidden;
-  place-items: center;
-  padding: 8px 12px;
+  align-content: center;
+  justify-items: start;
+  padding: 7px 10px;
   border: 1px solid color-mix(in srgb, var(--accent), white 12%);
-  background: rgba(4, 8, 14, 0.3);
-  backdrop-filter: blur(12px);
-  text-align: center;
+  background: rgba(4, 8, 14, 0.36);
+  backdrop-filter: blur(10px);
+  text-align: left;
 }
 
 .flight-director strong {
@@ -991,19 +1049,19 @@ input:focus-visible {
 }
 
 .flight-director small {
-  max-width: 480px;
+  max-width: 100%;
   color: rgba(240, 247, 255, 0.78);
   font-size: 11px;
 }
 
 .mission-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 126px;
-  gap: 12px;
-  padding: 10px 12px;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  gap: 9px;
+  padding: 8px 10px;
   border: 1px solid color-mix(in srgb, var(--accent), white 10%);
-  background: rgba(4, 8, 14, 0.52);
-  backdrop-filter: blur(12px);
+  background: rgba(4, 8, 14, 0.44);
+  backdrop-filter: blur(10px);
 }
 
 .mission-card span,
@@ -1022,7 +1080,10 @@ input:focus-visible {
 }
 
 .mission-card strong {
-  display: block;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   margin: 2px 0 3px;
   color: #fff;
   font-size: 12px;
@@ -1039,7 +1100,7 @@ input:focus-visible {
 .mission-score b {
   color: #fff;
   font-family: var(--font-geist-mono), monospace;
-  font-size: 19px;
+  font-size: 18px;
 }
 
 .mission-score i {
@@ -1058,7 +1119,8 @@ input:focus-visible {
 
 .juice-row {
   display: flex;
-  justify-content: center;
+  flex-wrap: wrap;
+  justify-content: flex-start;
   gap: 7px;
   pointer-events: none;
 }
@@ -1090,12 +1152,12 @@ input:focus-visible {
 .score-pop-stack {
   pointer-events: none;
   position: absolute;
-  left: 50%;
-  top: 54%;
+  left: 0;
+  bottom: calc(100% + 10px);
   display: grid;
-  justify-items: center;
+  justify-items: start;
   gap: 6px;
-  transform: translate(-50%, -50%);
+  transform: none;
 }
 
 .score-pop {
@@ -1137,17 +1199,17 @@ input:focus-visible {
 }
 
 .horizon-line {
-  width: min(32vw, 320px);
+  width: 78%;
   height: 1px;
   transform: translate(-50%, -50%);
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.42), transparent);
 }
 
 .director-cue {
-  width: 54px;
-  height: 14px;
+  width: 42px;
+  height: 10px;
   transform: translate(-50%, -50%);
-  border: 2px solid var(--accent);
+  border: 1px solid var(--accent);
   border-top: 0;
   box-shadow: 0 0 18px color-mix(in srgb, var(--accent), transparent 40%);
 }
@@ -1161,11 +1223,16 @@ input:focus-visible {
   display: none !important;
 }
 
+.hud-clean .hud-actions {
+  display: none !important;
+}
+
 .hud-full {
-  top: auto;
+  left: 50%;
   bottom: 18px;
   width: min(760px, calc(100vw - 40px));
   min-width: 0;
+  transform: translateX(-50%);
 }
 
 .hud-full .flight-director {
@@ -1183,15 +1250,15 @@ input:focus-visible {
 }
 
 .hud-minimal {
-  width: min(500px, calc(100vw - 760px));
+  width: min(330px, calc(100vw - 40px));
 }
 
-  .hud-minimal .flight-director,
-  .hud-minimal .mission-card,
-  .hud-minimal .juice-row,
-  .hud-minimal .hud-bottom,
-  .hud-minimal .hud-actions,
-  .hud-minimal .academy-ribbon {
+.hud-minimal .flight-director,
+.hud-minimal .mission-card,
+.hud-minimal .juice-row,
+.hud-minimal .hud-bottom,
+.hud-minimal .hud-actions,
+.hud-minimal .academy-ribbon {
   display: none;
 }
 
@@ -1268,11 +1335,11 @@ input:focus-visible {
 .run-summary-card {
   pointer-events: auto;
   position: absolute;
-  left: 50%;
-  top: calc(100% + 14px);
+  left: 0;
+  bottom: calc(100% + 10px);
   display: grid;
   width: min(430px, calc(100vw - 40px));
-  transform: translateX(-50%);
+  transform: none;
   gap: 10px;
   padding: 14px;
   border: 1px solid rgba(157, 243, 196, 0.42);
@@ -1786,10 +1853,16 @@ input:focus-visible {
   right: 18px;
   bottom: 18px;
   display: flex;
-  max-width: 360px;
+  max-width: 330px;
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 6px;
+  opacity: 0.62;
+  transition: opacity 150ms ease;
+}
+
+.controls-cheatsheet:hover {
+  opacity: 1;
 }
 
 .mobile-warning {
@@ -1798,7 +1871,7 @@ input:focus-visible {
 
 @media (max-width: 1240px) {
   .control-panel {
-    width: 292px;
+    width: 284px;
   }
 
   .academy-panel {
@@ -1806,8 +1879,8 @@ input:focus-visible {
   }
 
   .hud {
-    width: min(520px, calc(100vw - 700px));
-    min-width: 380px;
+    width: min(370px, calc(100vw - 40px));
+    min-width: 0;
   }
 }
 
@@ -1818,16 +1891,20 @@ input:focus-visible {
   }
 
   .hud {
-    left: calc(50% + 140px);
-    top: 154px;
-    width: min(520px, calc(100vw - 340px));
+    left: 18px;
+    top: auto;
+    bottom: 18px;
+    width: min(360px, calc(100vw - 40px));
     min-width: 0;
+    transform: none;
   }
 
   .hud-full {
-    left: calc(50% + 140px);
+    left: 50%;
     top: auto;
-    width: min(520px, calc(100vw - 340px));
+    bottom: 18px;
+    width: min(560px, calc(100vw - 40px));
+    transform: translateX(-50%);
   }
 
   .academy-panel {
@@ -1848,7 +1925,7 @@ input:focus-visible {
   }
 
   .flight-topbar {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr) auto;
     justify-items: stretch;
   }
 
@@ -1866,23 +1943,32 @@ input:focus-visible {
 @media (max-width: 820px) {
   .mobile-warning {
     position: absolute;
-    inset: 0;
-    z-index: 30;
-    display: grid;
-    place-content: center;
+    top: 82px;
+    left: 10px;
+    z-index: 9;
+    display: flex;
+    width: min(320px, calc(100vw - 20px));
+    align-items: center;
     gap: 8px;
-    padding: 28px;
-    background: rgba(3, 5, 8, 0.9);
-    text-align: center;
+    padding: 7px 9px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(3, 5, 8, 0.38);
+    backdrop-filter: blur(10px);
+    pointer-events: none;
+    text-align: left;
   }
 
   .mobile-warning strong {
-    font-size: 18px;
+    overflow: hidden;
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .mobile-warning span {
+    display: none;
     color: var(--muted);
-    font-size: 13px;
+    font-size: 11px;
   }
 
   .control-panel,
@@ -1894,39 +1980,71 @@ input:focus-visible {
   .flight-topbar {
     left: 12px;
     right: 12px;
+    grid-template-columns: minmax(0, 1fr) auto;
     width: auto;
     transform: none;
+  }
+
+  .flight-topbar .mode-tabs,
+  .flight-topbar .setup-button {
+    display: none;
+  }
+
+  .brand-lockup span:last-child {
+    max-width: 165px;
   }
 
   .hud {
     left: 10px;
     top: auto;
     bottom: 10px;
-    width: calc(100vw - 20px);
+    width: min(320px, calc(100vw - 20px));
     min-width: 0;
     transform: none;
   }
 
-  .hud-primary,
-  .hud-bottom {
-    overflow-x: auto;
-    justify-content: flex-start;
+  .hud-primary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hud-metric {
+    min-height: 30px;
+    padding: 4px 6px;
+  }
+
+  .hud-metric strong {
+    font-size: 13px;
   }
 
   .flight-director {
-    min-height: 66px;
+    min-height: 34px;
+    padding: 6px 8px;
+  }
+
+  .flight-director small {
+    display: none;
   }
 
   .mission-card {
     grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 6px 8px;
+  }
+
+  .mission-card strong {
+    -webkit-line-clamp: 1;
   }
 
   .mission-score {
     text-align: left;
   }
 
+  .mission-card small,
+  .juice-chip:nth-child(n + 4) {
+    display: none;
+  }
+
   .juice-row {
-    overflow-x: auto;
     justify-content: flex-start;
   }
 

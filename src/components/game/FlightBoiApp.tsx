@@ -6,6 +6,8 @@ import { useShallow } from "zustand/react/shallow";
 import {
   Activity,
   Camera,
+  Eye,
+  EyeOff,
   Gauge,
   GraduationCap,
   Home,
@@ -66,6 +68,7 @@ const hudLayouts: { id: HudLayout; label: string }[] = [
 
 export default function FlightBoiApp() {
   const [hasLaunched, setHasLaunched] = useState(false);
+  const [panelsOpen, setPanelsOpen] = useState(false);
   useEasterEggActivation(hasLaunched);
 
   const {
@@ -124,6 +127,10 @@ export default function FlightBoiApp() {
     exitEasterEgg();
     setHasLaunched(false);
   }, [exitEasterEgg, setScreenshotMode]);
+  const toggleHud = useCallback(() => {
+    setScreenshotMode(!screenshotMode);
+    if (!screenshotMode) setPanelsOpen(false);
+  }, [screenshotMode, setScreenshotMode]);
 
   if (!hasLaunched) {
     return (
@@ -138,9 +145,24 @@ export default function FlightBoiApp() {
       <FlightCanvas />
 
       <div className="atmosphere-vignette" aria-hidden="true" />
-      {easterEggMode === "none" && <MobileWarning />}
+      {!screenshotMode && easterEggMode === "none" && <MobileWarning />}
 
       {easterEggMode === "grid-run" && <GridRunHud />}
+
+      {screenshotMode && easterEggMode === "none" && (
+        <button
+          className="hud-restore-button"
+          type="button"
+          onClick={() => setScreenshotMode(false)}
+          data-flight-ui="true"
+          aria-label="Show HUD"
+          title="Show HUD (H or Esc)"
+        >
+          <Eye size={16} />
+          <span>Show HUD</span>
+          <kbd>H</kbd>
+        </button>
+      )}
 
       {!screenshotMode && easterEggMode === "none" && (
         <>
@@ -148,7 +170,7 @@ export default function FlightBoiApp() {
           <CockpitOverlay />
           <AcademyOverlay />
 
-          <section className="flight-topbar" data-flight-ui="true" aria-label="FlightBoi command deck">
+          <section className={panelsOpen ? "flight-topbar panels-open" : "flight-topbar"} data-flight-ui="true" aria-label="FlightBoi command deck">
             <div className="brand-lockup">
               <span className="brand-mark">
                 <Plane size={18} strokeWidth={2.2} />
@@ -175,6 +197,24 @@ export default function FlightBoiApp() {
 
             <div className="topbar-actions">
               <button
+                className={panelsOpen ? "icon-button setup-button active" : "icon-button setup-button"}
+                type="button"
+                onClick={() => setPanelsOpen((open) => !open)}
+                title={panelsOpen ? "Hide setup panels" : "Show setup panels"}
+                aria-label={panelsOpen ? "Hide setup panels" : "Show setup panels"}
+              >
+                <Settings2 size={17} />
+              </button>
+              <button
+                className="icon-button hud-button"
+                type="button"
+                onClick={toggleHud}
+                title="Hide HUD and panels (H)"
+                aria-label="Hide HUD and panels"
+              >
+                <EyeOff size={17} />
+              </button>
+              <button
                 className="icon-button menu-button"
                 type="button"
                 onClick={handleReturnToMenu}
@@ -195,7 +235,8 @@ export default function FlightBoiApp() {
             </div>
           </section>
 
-          <aside className="left-panel control-panel" data-flight-ui="true" aria-label="Aircraft and world setup">
+          {panelsOpen && (
+            <aside className="left-panel control-panel" data-flight-ui="true" aria-label="Aircraft and world setup">
             <PanelHeader icon={<Settings2 size={16} />} title="Hangar" detail="Aircraft, map, realism" />
 
             <div className="field-block">
@@ -249,9 +290,11 @@ export default function FlightBoiApp() {
                 ))}
               </div>
             </div>
-          </aside>
+            </aside>
+          )}
 
-          <aside className="right-panel control-panel" data-flight-ui="true" aria-label="Pilot systems">
+          {panelsOpen && (
+            <aside className="right-panel control-panel" data-flight-ui="true" aria-label="Pilot systems">
             <PanelHeader icon={<Gauge size={16} />} title="Pilot Systems" detail="W&B, camera, settings" />
 
             <div className="instrument-strip">
@@ -417,7 +460,8 @@ export default function FlightBoiApp() {
               <strong>{activeAircraft.soundProfile.idle}</strong>
               <span>{activeAircraft.description}</span>
             </div>
-          </aside>
+            </aside>
+          )}
 
           <div className="controls-cheatsheet" data-flight-ui="true">
             <span>Arrow keys fly</span>
@@ -427,6 +471,7 @@ export default function FlightBoiApp() {
             <span>Shift air brake</span>
             <span>F/R flaps</span>
             <span>I/K trim</span>
+            <span>H hide HUD</span>
           </div>
         </>
       )}

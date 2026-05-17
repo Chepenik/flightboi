@@ -22,6 +22,7 @@ const emptyInput = (): InputFrame => ({
 
 export function useFlightInput(): MutableRefObject<InputFrame> {
   const controls = useGameStore((state) => state.controls);
+  const screenshotMode = useGameStore((state) => state.screenshotMode);
   const setScreenshotMode = useGameStore((state) => state.setScreenshotMode);
   const inputRef = useRef<InputFrame>(emptyInput());
   const keysRef = useRef(new Set<string>());
@@ -90,6 +91,11 @@ export function useFlightInput(): MutableRefObject<InputFrame> {
         return;
       }
       if (shouldIgnoreKeyboardTarget(event.target)) return;
+      if (!event.repeat && key === "h") {
+        event.preventDefault();
+        setScreenshotMode(!screenshotMode);
+        return;
+      }
       if ([" ", "arrowup", "arrowdown", "arrowleft", "arrowright", "backspace"].includes(key)) {
         event.preventDefault();
       }
@@ -156,7 +162,7 @@ export function useFlightInput(): MutableRefObject<InputFrame> {
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("wheel", handleWheel);
     };
-  }, [controls, setScreenshotMode]);
+  }, [controls, screenshotMode, setScreenshotMode]);
 
   return inputRef;
 }
